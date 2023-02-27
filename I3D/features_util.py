@@ -1,10 +1,12 @@
 import argparse
 from tqdm import tqdm
 import torch
-import json
 import numpy as np
 import os
+import json
 import torch.nn as nn
+import cv2
+import time
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'                                                                
 device = torch.device('cuda:0')
@@ -19,7 +21,7 @@ from torchvision.transforms._transforms_video import (
     CenterCropVideo,
     NormalizeVideo
 )
-from pytorchvideo.data.encoded_video import EncodedVideo
+
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     ShortSideScale,
@@ -32,72 +34,92 @@ std = [0.225, 0.225, 0.225]
 crop_size = 256
 num_frames = 21
 window_side = 10
-sampling_rate = 1
 frames_per_second = 30
 alpha = 4
-
 max_buff_len = 1000
-margin = 5
+ 
+transform = Compose([
+    Lambda(lambda x: x/255.0),
+    NormalizeVideo(mean, std),
+    ShortSideScale(size=side_size),
+    CenterCropVideo(crop_size)
+])
 
-transform = ApplyTransformToKey(
-    key = "video", 
-    transform = Compose([
-        Lambda(lambda x: x/255.0),
-        NormalizeVideo(mean, std),
-        ShortSideScale(size=side_size),
-        CenterCropVideo(crop_size)
-    ]),
-)
+class VideoWrapper:
+    def __init__(self, input_file):
+        self.cap = cv2.VideoCapture(input_file)
+                        
+    def get(self, from_frame, need):
+        i = 0
+        success = True
+        res = []
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, from_frame)
+
+        while success and i < need:
+            success, frame = self.cap.read()
+            i += 1
+            if success:
+                frame = np.transpose(frame, (2, 0, 1))
+                res.append(frame)
+
+        res = np.stack(res, axis = 1)
+        return res
+                                                                                                            
+    def num_frames(self):
+        return int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
 
 def count_one_video(input_file, output_file):
-    video = EncodedVideo.from_path(input_file)
-    one_frame_duration = 1 * sampling_rate / frames_per_second
-    start_sec = 0
-    end_sec = min((max_buff_len + margin) * one_frame_duration, 
-                  (video._duration.numerator - 1) * one_frame_duration)
-    video_buff = transform(video.get_clip(start_sec = start_sec, end_sec = end_sec))
-    inputs_buff = video_buff["video"]
-    output = []
-    buffed_till = min(max_buff_len, video._duration.numerator)
+    video = VideoWrapper(input_file)
     shift = 0
-    for start_frame in tqdm(range(video._duration.numerator)):
+    buffed_till = 0
+    output = []
+    num_frames = video.num_frames()
+
+    for start_frame in tqdm(range(num_frames)):
         from_frame = max(0, start_frame - window_side)
-        to_frame = min(video._duration.numerator - 1, start_frame + window_side + 1)
+        to_frame = min(num_frames - 1, start_frame + window_side + 1)
 
         if to_frame >= buffed_till:
-            buffed_till = min(buffed_till + max_buff_len, video._duration.numerator)
-            shift = from_frame - window_side
-            start_sec = shift * one_frame_duration
-            end_sec = min(end_sec + ((max_buff_len + margin) * one_frame_duration), 
-                          (video._duration.numerator + margin) * one_frame_duration)
-            video_buff = transform(video.get_clip(start_sec = start_sec, end_sec = end_sec))
-            inputs_buff = video_buff["video"]
+            buffed_till = min(buffed_till + max_buff_len, num_frames)
+            shift = from_frame
+            need = buffed_till - shift
+            video_buff = transform(torch.tensor(video.get(shift, need)))
 
         before_padding_sz, after_padding_sz = 0, 0
         if from_frame == 0:
             before_padding_sz = window_side - start_frame
-        if to_frame == (video._duration.numerator - 1):
-           after_padding_sz = window_side + 2 + start_frame - video._duration.numerator
+        if to_frame == (num_frames - 1):
+           after_padding_sz = window_side + 2 + start_frame - num_frames
                                                     
-        buff_shape = inputs_buff.shape
+        buff_shape = video_buff.shape
         before_padding = torch.zeros([buff_shape[0], before_padding_sz, buff_shape[2], buff_shape[3]])
         after_padding = torch.zeros([buff_shape[0], after_padding_sz, buff_shape[2], buff_shape[3]])
-        inputs = inputs_buff[:, (from_frame - shift):(to_frame - shift), :, :]
+
+        inputs = video_buff[:, (from_frame - shift):(to_frame - shift), :, :]
         inputs = torch.cat([before_padding, inputs, after_padding], 1)
         inputs = [i.to(device)[None, ...] for i in inputs]
         inputs = torch.cat(inputs).unsqueeze(0)
+
         features = model(inputs)
         output.append(features.detach().cpu().numpy())
 
     res = np.concatenate(output, axis = 2)
     np.save(output_file, res.squeeze())
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', default = '/DATA/ichuviliaeva/videos/50salads_vid/rgb/rgb-01-1.avi')
-    parser.add_argument('--output', default = '/DATA/ichuviliaeva/videos/i3d_experemental/features/features-01-1.npy')
+    parser.add_argument('--input_dir', default = '/DATA/ichuviliaeva/videos/50salads_vid/rgb/')
+    parser.add_argument('--output_dir', default = '/DATA/ichuviliaeva/videos/i3d_experemental/features/')
     args = parser.parse_args()
-    count_one_video(args.input, args.output)
+    for f in os.listdir(args.input_dir):
+        if f.split('.')[1] == 'avi':
+            print('counting for ' + f)
+            start = time.time()
+            count_one_video(args.input_dir + f, args.output_dir + f.split('.')[0] + '.npy')
+            end = time.time()
+            print('ended, time in seconds = ', end - start)
 
 if __name__ == '__main__':
         main()
