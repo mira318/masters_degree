@@ -8,11 +8,20 @@ import torch.nn as nn
 import cv2
 import time
 
+import wandb
+
+wandb.init(project='I3D features counting')
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'                                                                
 device = torch.device('cuda:0')
 model_name = "i3d_r50"
 model = torch.hub.load("facebookresearch/pytorchvideo", model=model_name, pretrained=True)
-model.blocks[6] = nn.AdaptiveAvgPool3d(output_size=1)
+
+model.blocks[6] = nn.Sequential(
+    nn.AvgPool3d(kernel_size = (4, 7, 7), stride = (1, 1, 1), padding = (0, 0, 0)),
+    nn.AdaptiveAvgPool3d(output_size=1)
+)
+
 model = model.to(device)
 model = model.eval()
 
@@ -111,7 +120,7 @@ def count_one_video(input_file, output_file):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', default = '/DATA/ichuviliaeva/videos/50salads_vid/rgb/')
-    parser.add_argument('--output_dir', default = '/DATA/ichuviliaeva/videos/i3d_experemental/features/')
+    parser.add_argument('--output_dir', default = '/DATA/ichuviliaeva/videos/i3d_experemental/features_diff_pool/')
     args = parser.parse_args()
     for f in os.listdir(args.input_dir):
         if f.split('.')[1] == 'avi':

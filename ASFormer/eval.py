@@ -2,7 +2,10 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 import seaborn as sns
- 
+import wandb
+
+
+wandb.init(project='ASFormer on features from I3D')
 
 def read_file(path):
     with open(path, 'r') as f:
@@ -212,8 +215,9 @@ def main():
  
     parser.add_argument('--dataset', default="gtea")
     parser.add_argument('--split', default=1, type=int)
-    parser.add_argument('--result_dir', default='results')
+    parser.add_argument('--result_dir', default='results_i3d')
     parser.add_argument('--data_dir', default='/DATA/ichuviliaeva/videos/data/')
+    parser.add_argument('--features_dir', default='/DATA/ichuviliaeva/videos/i3d_experemental/features_cut/')
     
     args = parser.parse_args()
 

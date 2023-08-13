@@ -8,7 +8,10 @@ import os
 import argparse
 import numpy as np
 import random
+import wandb
 
+
+wandb.init(project='ASFormer on features from I3D')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 seed = 19980125 # my birthday, :)
@@ -21,9 +24,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--action', default='train')
 parser.add_argument('--dataset', default="50salads")
 parser.add_argument('--split', default='1')
-parser.add_argument('--model_dir', default='models')
-parser.add_argument('--result_dir', default='results')
+parser.add_argument('--model_dir', default='models_i3d')
+parser.add_argument('--result_dir', default='results_i3d')
 parser.add_argument('--data_dir', default='/DATA/ichuviliaeva/videos/data/')
+parser.add_argument('--features_dir', default='/DATA/ichuviliaeva/videos/i3d_experemental/features_cut/')
 
 args = parser.parse_args()
  
@@ -55,7 +59,7 @@ if args.dataset == 'breakfast':
 
 vid_list_file = args.data_dir+args.dataset+"/splits/train.split"+args.split+".bundle"
 vid_list_file_tst = args.data_dir+args.dataset+"/splits/test.split"+args.split+".bundle"
-features_path = args.data_dir+args.dataset+"/features/"
+features_path = args.features_dir # args.data_dir+args.dataset+"/features/"
 gt_path = args.data_dir+args.dataset+"/groundTruth/"
  
 mapping_file = args.data_dir+args.dataset+"/mapping.txt"
