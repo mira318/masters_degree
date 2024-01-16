@@ -76,9 +76,11 @@ class CaptionDedupProcessor(object):
             pickle.dump(self.data, fw, pickle.HIGHEST_PROTOCOL)
 
     def save_stat(self, video_id, caption):
+        ############################################################################################
         video_fn = os.path.join(
-            "data/feat/feat_how2_s3d", video_id + ".npy"
+            "G:\IChuviliaeva\Data\howto100m_s3d_features\howto100m_s3d_features", video_id + ".mp4.npy"
         )
+        ############################################################################################
         if os.path.isfile(video_fn):
             with open(video_fn, "rb", 1) as fr:  # 24 is the buffer size. buffered
                 version = np.lib.format.read_magic(fr)
@@ -92,7 +94,7 @@ class CaptionDedupProcessor(object):
             ):
                 clip_len = (
                     (end - max(caption["end"][idx - 1], start))
-                    if idx > 0
+                    if idx > 0 
                     else end - start
                 )
                 t_clip_len += clip_len

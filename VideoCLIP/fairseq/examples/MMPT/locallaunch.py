@@ -10,8 +10,8 @@ from omegaconf import OmegaConf
 from mmpt.utils import recursive_config, overwrite_dir
 from mmpt_cli.localjob import LocalJob
 
-import wandb
-wandb.init(project='VideoCLIP reproduction')
+# import wandb
+# wandb.init(project='VideoCLIP reproduction')
 
 class JobLauncher(object):
     JOB_CONFIG = {

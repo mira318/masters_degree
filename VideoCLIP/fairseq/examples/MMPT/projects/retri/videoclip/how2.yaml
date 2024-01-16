@@ -42,14 +42,14 @@ fairseq:
     ddp_backend: no_c10d
     max_epoch: 25
   checkpoint:
-    save_dir: runs/retri/videoclip
+    save_dir: runs/task
     save_interval_updates: 1024
     keep_interval_updates: 2
     keep_last_epochs: 30
 task_type: sweep_big
 slurm_config: big
 eval:
-  save_path: runs/retri/videoclip
+  save_path: runs/task
 model:
   model_cls: MMFusionSeparate
   mm_encoder_cls: null
