@@ -3,7 +3,7 @@ import math
 from sklearn.model_selection import train_test_split
 import argparse
 import os
-import tqdm
+from tqdm import tqdm
 
 def common_column(cat1, cat2):
     if type(cat1) == float:
@@ -15,18 +15,19 @@ def common_column(cat1, cat2):
 parser = argparse.ArgumentParser(description="parser to split HowTo100M")
 parser.add_argument('--how2csv', default="~/Desktop/mag_degree/HowTo100M_v1.csv")
 parser.add_argument('--saveto', default="/home/irene/Desktop/mag_degree/how2mini")
-parser.add_argument('--vfeatdir', default="/home/irene/Desktop/mag_degree/how2mini")
+parser.add_argument('--vfeatdir', default="/home/irene/Desktop/mag_degree/how2mini/features")
 args = parser.parse_args()
 
 how2_df = pd.read_csv(args.how2csv)
 how2_df['common'] = how2_df.apply(lambda t: common_column(t['category_1'], t['category_2']), axis = 1)
-how2_df['exists'] = how2_df.apply(
-    lambda t: os.path.isfile(os.path.join(args.vfeatdir, t['video_id'] + '.mp4.npy')),
-    axis = 1
-)
-how2_df = how2_df[how2_df['exists'] == True]
 
-train, val = train_test_split(how2_df, test_size=4000, stratify=how2_df['common'], random_state=37)
+filtered = pd.DataFrame()
+for i in tqdm(range(len(how2_df))):
+    if os.path.isfile(os.path.join(args.vfeatdir, how2_df.iloc[i]['video_id'] + '.mp4.npy')):
+        filtered.append(how2_df.iloc[i])
+        
+        
+train, val = train_test_split(filtered, test_size=4000, stratify=how2_df['common'], random_state=37)
 print('train size = ', len(train['video_id']))
 print('val size = ', len(val['video_id']))
 
