@@ -21,7 +21,7 @@ args = parser.parse_args()
 how2_df = pd.read_csv(args.how2csv)
 how2_df['common'] = how2_df.apply(lambda t: common_column(t['category_1'], t['category_2']), axis = 1)
 how2_df['exists'] = how2_df.apply(
-    lambda t: os.path.isfile(os.path.join(args.vfeatdir, t['video_id'] + '.mp4.npy')) == True,
+    lambda t: os.path.isfile(os.path.join(args.vfeatdir, t['video_id'] + '.mp4.npy')),
     axis = 1
 )
 how2_df = how2_df[how2_df['exists'] == True]
@@ -30,12 +30,12 @@ train, val = train_test_split(how2_df, test_size=4000, stratify=how2_df['common'
 print('train size = ', len(train['video_id']))
 print('val size = ', len(val['video_id']))
 
-with open(os.path.join(args.saveto, 'how2_s3d_train.lst'), 'w+') as f:    
+with open(os.path.join(args.saveto, 'how2_s3d_train.lst'), 'w') as f:    
     for v_id in train['video_id']:
         f.write(v_id + '.mp4\n')
     f.close()
 
-with open(os.path.join(args.saveto, 'how2_s3d_val.lst'), 'w+') as f:
+with open(os.path.join(args.saveto, 'how2_s3d_val.lst'), 'w') as f:
     
     for v_id in val['video_id']:
         f.write(v_id + '.mp4\n')
