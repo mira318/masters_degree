@@ -379,6 +379,7 @@ class MMFusionShare(MMFusion):
         output_hidden_states=False,
         **kwargs
     ):
+
         pooled_video = self.forward_video(
             vfeats,
             vmasks,
@@ -387,6 +388,7 @@ class MMFusionShare(MMFusion):
             output_hidden_states
         )
 
+        
         pooled_text = self.forward_text(
             caps,
             cmasks,
@@ -522,7 +524,6 @@ class MMFusionSeparate(MMFusionShare):
         **kwargs
     ):
         input_ids = caps[:, :2]
-
         attention_mask = torch.cat([
             cmasks[:, :1],
             vmasks,

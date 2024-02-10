@@ -33,7 +33,10 @@ from transformers.models.bert.modeling_bert import BertEmbeddings, ACT2FN
 class VideoTokenMLP(nn.Module):
     def __init__(self, config):
         super().__init__()
-        input_dim = config.input_dim if hasattr(config, "input_dim") else 512
+        #############################################################################################################
+        # input_dim = config.input_dim if hasattr(config, "input_dim") else 512
+        input_dim = 1024
+        #############################################################################################################
         self.linear1 = nn.Linear(input_dim, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size)
         self.activation = ACT2FN[config.hidden_act]

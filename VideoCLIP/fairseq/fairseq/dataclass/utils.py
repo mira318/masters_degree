@@ -385,7 +385,6 @@ class omegaconf_no_object_check:
 
 def convert_namespace_to_omegaconf(args: Namespace) -> DictConfig:
     """Convert a flat argparse.Namespace to a structured DictConfig."""
-
     # Here we are using field values provided in args to override counterparts inside config object
     overrides, deletes = override_module_args(args)
 

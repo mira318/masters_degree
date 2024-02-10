@@ -18,7 +18,7 @@ class ShardedTensor(object):
 
     @staticmethod
     def from_list(xs):
-        starts = np.full((len(xs) + 1,), -1, dtype=np.long)
+        starts = np.full((len(xs) + 1,), -1, dtype=np.int64)
         data = np.concatenate(xs, axis=0)
         starts[0] = 0
         for i, x in enumerate(xs):

@@ -17,7 +17,7 @@ class TokenizerDataset(Dataset):
     def __init__(self, config):
         self.text_processor = PKLJSONStrTextProcessor(config)
         self.video_ids = list(self.text_processor.data.keys())
-
+        
     def __getitem__(self, idx):
         video_id = self.video_ids[idx]
         return video_id, self.text_processor(video_id)
@@ -73,13 +73,15 @@ def sharding(config, out_file):
             )
 
 
+def collator(samples):
+    return samples
+
 def tokenize(config, out_file):
-    def collator(samples):
-        return samples
+    # def collator(samples):
+    #    return samples
     dataset = TokenizerDataset(config)
     data = {}
-    for idx, batch in enumerate(
-            DataLoader(dataset, collate_fn=collator, num_workers=16)):
+    for idx, batch in enumerate(DataLoader(dataset, collate_fn=collator, num_workers=16)):
         for video_id, caption in batch:
             data[video_id] = caption
         if idx % 5000 == 0:

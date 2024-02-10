@@ -14,6 +14,11 @@ import os
 import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+##############################################################################################################################
+import wandb
+wandb.init(project='VideoCLIP reproduction')
+##############################################################################################################################
+
 # We need to setup root logger before importing any fairseq libraries.
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -218,6 +223,9 @@ def main(cfg: FairseqConfig) -> None:
         )
     train_meter.stop()
     logger.info("done training in {:.1f} seconds".format(train_meter.sum))
+    ############################################################################################################
+    wandb.log({"done training in seconds": train_meter.sum})
+    ############################################################################################################
 
     # ioPath implementation to wait for all asynchronous file writes to complete.
     if cfg.checkpoint.write_checkpoints_asynchronously:
@@ -336,6 +344,9 @@ def train(
             if num_updates % cfg.common.log_interval == 0:
                 stats = get_training_stats(metrics.get_smoothed_values("train_inner"))
                 progress.log(stats, tag="train_inner", step=num_updates)
+                #########################################################################################################
+                wandb.log({"train_inner_stats": stats, "tag": "train_inner", "step": num_updates})
+                #########################################################################################################
 
                 # reset mid-epoch stats after each log interval
                 # the end-of-epoch stats will still be preserved
@@ -353,6 +364,9 @@ def train(
     logger.info("end of epoch {} (average epoch stats below)".format(epoch_itr.epoch))
     stats = get_training_stats(metrics.get_smoothed_values("train"))
     progress.print(stats, tag="train", step=num_updates)
+    ###########################################################################################################################
+    wandb.log({"average_train_stats": stats, "tag": "train", "step": num_updates, "epoch": epoch_itr.epoch})
+    ###########################################################################################################################
 
     # reset epoch-level meters
     metrics.reset_meters("train")
@@ -392,6 +406,10 @@ def validate_and_save(
             f"Stopping training due to "
             f"num_updates: {num_updates} >= max_update: {max_update}"
         )
+        ##############################################################################################################
+        wandb.log({"stopping num_updates": num_update, "max_update": max_update})
+        ##############################################################################################################
+        
 
     training_time_hours = trainer.cumulative_training_time() / (60 * 60)
     if (
@@ -470,7 +488,7 @@ def validate(
     valid_losses = []
     for subset_idx, subset in enumerate(subsets):
         logger.info('begin validation on "{}" subset'.format(subset))
-
+        
         # Initialize data iterator
         itr = trainer.get_valid_iterator(subset).next_epoch_itr(
             shuffle=False, set_dataset_epoch=False  # use a fixed valid set
@@ -530,6 +548,9 @@ def validate(
             task.post_validate(trainer.get_model(), stats, agg)
 
         progress.print(stats, tag=subset, step=trainer.get_num_updates())
+        #############################################################################################################################
+        wandb.log({"validation_subset": subset, "validation_stats": stats, "tag": subset, "step": trainer.get_num_updates()})
+        #############################################################################################################################
 
         valid_losses.append(stats[cfg.checkpoint.best_checkpoint_metric])
     return valid_losses

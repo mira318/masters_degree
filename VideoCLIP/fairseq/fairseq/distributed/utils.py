@@ -366,9 +366,12 @@ def distributed_main(i, main, cfg: FairseqConfig, kwargs):
 
 
 def call_main(cfg: FairseqConfig, main, **kwargs):
+    print('in utils call_main, cfg.distributed_training = ', cfg.distributed_training)
     if cfg.distributed_training.distributed_init_method is None:
+        print('did infer, maybe changed?')
         infer_init_method(cfg.distributed_training)
 
+    print('in utils call_main, just before if cfg.distributed_training = ', cfg.distributed_training)
     if cfg.distributed_training.distributed_init_method is not None:
         # distributed training
         if not cfg.distributed_training.distributed_no_spawn:

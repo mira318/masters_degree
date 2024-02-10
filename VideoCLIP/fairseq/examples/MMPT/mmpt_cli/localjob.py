@@ -82,7 +82,6 @@ class LocalJob(BaseJob):
                         ]
                     cmd_list.extend(param)
 
-        print("launching", " ".join(cmd_list))
         if not self.dryrun:
             os.system(" ".join(cmd_list))
         return JobStatus("12345678")

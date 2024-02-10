@@ -859,8 +859,10 @@ class PKLJSONStrTextProcessor(TextProcessor):
     def __init__(self, config, max_clip_text_len=96):
         print("[Warning] PKLJSONStrTextProcessor is slow for num_workers > 0.")
         self.caption_pkl_path = str(config.caption_pkl_path)
+        
         with open(self.caption_pkl_path, "rb") as fd:
             self.data = pickle.load(fd)
+        
         self.max_clip_text_len = max_clip_text_len
         from transformers import AutoTokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(

@@ -78,7 +78,7 @@ class CaptionDedupProcessor(object):
     def save_stat(self, video_id, caption):
         ############################################################################################
         video_fn = os.path.join(
-            "G:\IChuviliaeva\Data\howto100m_s3d_features\howto100m_s3d_features", video_id + ".mp4.npy"
+            "G:\IChuviliaeva\Data\howto100m_s3d_features\howto100m_s3d_features", video_id + ".npy"
         )
         ############################################################################################
         if os.path.isfile(video_fn):
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="dedup how2 caption")
-    parser.add_argument('--how2dir', default="data/how2")
+    parser.add_argument('--how2dir', default="G:\IChuviliaeva\Data\howTo100M_meta")
     args = parser.parse_args()
 
     raw_caption_json = os.path.join(args.how2dir, "raw_caption.json")
