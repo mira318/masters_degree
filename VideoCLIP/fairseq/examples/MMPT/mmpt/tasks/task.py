@@ -138,12 +138,31 @@ class Task(object):
 
     def flat_subsample(self, tensor):
         size = tensor.size()
+        ############################################################################################
+        # was looking for the cat mistake somewhere here. Added check self.config.fairseq.dataset.batch_size > 1
+        # because before it was only for batch_size == 1
+        print('in the flat:')
+        print('size = ', size)
+        ############################################################################################
         if len(size) >= 2:
-            batch_size = size[0] * size[1]
-            expanded_size = (
-                (batch_size,) + size[2:] if len(size) > 2
-                else (batch_size,)
-            )
+            if self.config.fairseq.dataset.batch_size > 1:
+                batch_size = size[0] * size[1] * size[2]
+                ############################################################################################
+                print('batch_size = ', batch_size)
+                ############################################################################################ 
+                expanded_size = (
+                    (batch_size,) + size[3:] if len(size) > 3
+                    else (batch_size,)
+                )
+                ############################################################################################
+                print('expanded_size = ', expanded_size)
+                ############################################################################################ 
+            else:
+                batch_size = size[0] * size[1]
+                expanded_size = (
+                    (batch_size,) + size[2:] if len(size) > 2
+                    else (batch_size,)
+                )
             tensor = tensor.view(expanded_size)
         return tensor
 
@@ -155,6 +174,9 @@ class Task(object):
         ):
             for key in sample:
                 if torch.is_tensor(sample[key]):
+                    #################################################################################
+                    print('calling flat for key = ', key) 
+                    #################################################################################
                     sample[key] = self.flat_subsample(sample[key])
         return sample
 
@@ -163,6 +185,19 @@ class Task(object):
         loss_scalar = float("inf")
 
         sample = self.reshape_subsample(sample)
+        ####################################################################
+        # big output after reshaping, to chreck I corrected it right
+        # now I have a crush with shapes, so smth wrong(
+        print('in call:')
+        print('sample.keys() = ', sample.keys())
+        print('sample[caps].shape = ', sample['caps'].shape)
+        print('sample[cmasks].shape = ', sample['cmasks'].shape)
+        print('sample[vfeats].shape = ', sample['vfeats'].shape)
+        print('sample[vmasks].shape = ', sample['vmasks'].shape)
+        print('sample[video_start].shape = ', sample['video_start'].shape)
+        print('len(sample[video_id]) = ', len(sample['video_id']))
+        print('sample[video_id] = ', sample['video_id'])
+        ####################################################################
         outputs = self.model(**sample)
         sample.update(outputs)
         if self.loss_fn is not None:

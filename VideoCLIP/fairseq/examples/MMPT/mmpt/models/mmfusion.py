@@ -379,7 +379,6 @@ class MMFusionShare(MMFusion):
         output_hidden_states=False,
         **kwargs
     ):
-
         pooled_video = self.forward_video(
             vfeats,
             vmasks,
@@ -387,7 +386,6 @@ class MMFusionShare(MMFusion):
             cmasks,
             output_hidden_states
         )
-
         
         pooled_text = self.forward_text(
             caps,

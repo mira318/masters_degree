@@ -5,6 +5,9 @@
 """
 TODO (huxu): fairseq wrapper class for all dataset you defined: mostly MMDataset.
 """
+#######################################################################################
+import torch
+#######################################################################################
 
 from collections import OrderedDict
 
@@ -43,6 +46,18 @@ class FairseqMMDataset(FairseqDataset):
             batch = OrderedDict()
             for key in samples[0]:
                 if samples[0][key] is not None:
+                    ###############################################################################################
+                    print('in collator:')
+                    for sample in samples:
+                        if isinstance(sample[key], list):
+                            print(key, 'is list of')
+                            if torch.is_tensor(sample[key][0]):
+                                print('tensors with shape ', sample[key][0].size())
+                            else:
+                                print('lists with len', len(sample[key][0]))
+                        else:
+                            print('skipped ', key, 'not a list of')
+                    ###############################################################################################
                     batch[key] = default_collate([sample[key] for sample in samples])
             return batch
         else:
