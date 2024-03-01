@@ -54,11 +54,35 @@ class RetriTask(Task):
         self.retri_data = MMDataset(
             meta_processor, video_processor, text_processor, aligner
         )
-
+        ############################################################
+        print('####################################################')
+        print('before distributed sampler call:')
+        print('self.retri_data = ', self.retri_data)
+        print('num_workers = ', self.config.fairseq.dataset.num_workers)
+        print('rank = ', get_local_rank())
+        print('world_size = ', 1)
+        print('####################################################')
+        ############################################################
+        # bad and ugly and scary, because there is init_process_group in fairseq/distributed/utils
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '2323'
+        
+        torch.distributed.init_process_group(
+           'gloo', rank=get_local_rank(), 
+            world_size=1
+        )
+        ##########################################################################
+        # commented for 1 GPU runs
         # retri_sampler = DistributedSampler(self.retri_data)
+        ##########################################################################
         infer_scale = 16
+        ##########################################################################
+        # multiply by actual batch_size in here? (self.config.fairseq.dataset.batch_size) - added it
+        # should be without it for full reproduction.
+        ##########################################################################
         batch_size = self.config.dataset.num_video_per_batch \
-            * infer_scale
+            * infer_scale * self.config.fairseq.dataset.batch_size
+        ###########################################################################
 
         self.retri_dataloader = DataLoader(
             self.retri_data,
