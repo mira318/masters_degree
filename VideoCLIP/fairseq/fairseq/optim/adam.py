@@ -208,12 +208,15 @@ class Adam(torch.optim.Optimizer):
                 if amsgrad:
                     max_exp_avg_sq = state["max_exp_avg_sq"]
                 ###################################################################################################################
-                # beta1, beta2 = group["betas"]
+                beta1, beta2 = group["betas"]
+                # print('old: beta1 = ', beta1, ' , beta2 = ', beta2)
                 # doesn't work now - reading library (likely it is json) changed
-                import re
-                splitted = re.split(',|\)|\(', group["betas"])
-                beta1 = float(splitted[1])
-                beta2 = float(splitted[2])
+                # what windows may force you to do...
+                # import re
+                # splitted = re.split(',|\)|\(', group["betas"])
+                # beta1 = float(splitted[1])
+                # beta2 = float(splitted[2])
+                # print('new: beta1 = ', beta1, ' , beat2 = ', beta2) 
                 ####################################################################################################################
 
                 state["step"] += 1

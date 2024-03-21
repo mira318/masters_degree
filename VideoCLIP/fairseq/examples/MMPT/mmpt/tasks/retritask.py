@@ -55,7 +55,7 @@ class RetriTask(Task):
             meta_processor, video_processor, text_processor, aligner
         )
 
-        # retri_sampler = DistributedSampler(self.retri_data)
+        retri_sampler = DistributedSampler(self.retri_data)
         infer_scale = 16
         batch_size = self.config.dataset.num_video_per_batch \
             * infer_scale
@@ -65,7 +65,7 @@ class RetriTask(Task):
             collate_fn=self.retri_data.collater,
             batch_size=batch_size,
             shuffle=False,
-            # sampler=retri_sampler,
+            sampler=retri_sampler,
             num_workers=self.config.fairseq.dataset.num_workers
         )
         return self.retri_dataloader
@@ -95,9 +95,9 @@ class RetriTask(Task):
             self.model.train()
             self.model.is_train = True
 
-        # torch.distributed.barrier()
+        torch.distributed.barrier()
         output = self._retri_sync(epoch, out_dir)
-        # torch.distributed.barrier()
+        torch.distributed.barrier()
         self.train_data.meta_processor.set_candidates(output)
         return output
 
