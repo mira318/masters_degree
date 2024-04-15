@@ -27,8 +27,8 @@ fairseq:
     log_interval: 1000
     fp16: true
   dataset:
-    num_workers: 0 # was 4
-    batch_size: 4 # was 1
+    num_workers: 2 # was 4
+    batch_size: 1 # was 1
   optimization:
     lr:
     - 5.0e-05
@@ -48,6 +48,13 @@ fairseq:
     keep_last_epochs: 30
 task_type: sweep_big
 slurm_config: big
+
+distributed_training:
+  distributed_init_method: None
+  distributed_backend: 'gloo'
+  distributed_word_size: 1
+  distributed_num_process: 1
+
 eval:
   save_path: G:\IChuviliaeva\Data\howTo100Mruns\reproduction_checkpoints2
 model:

@@ -60,17 +60,17 @@ class RetriTask(Task):
         print('self.retri_data = ', self.retri_data)
         print('num_workers = ', self.config.fairseq.dataset.num_workers)
         print('rank = ', get_local_rank())
-        print('world_size = ', 1)
+        # print('world_size = ', 1)
         print('####################################################')
         ############################################################
         # bad and ugly and scary, because there is init_process_group in fairseq/distributed/utils
-        os.environ['MASTER_ADDR'] = 'localhost'
-        os.environ['MASTER_PORT'] = '2323'
+        # os.environ['MASTER_ADDR'] = 'localhost'
+        # os.environ['MASTER_PORT'] = '2323'
         
-        torch.distributed.init_process_group(
-           'gloo', rank=get_local_rank(), 
-            world_size=1
-        )
+        # torch.distributed.init_process_group(
+        #   'gloo', rank=get_local_rank(), 
+        #    world_size=1
+        # )
         ##########################################################################
         # commented for 1 GPU runs
         # retri_sampler = DistributedSampler(self.retri_data)

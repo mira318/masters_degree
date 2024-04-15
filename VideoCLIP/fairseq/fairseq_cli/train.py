@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 ##############################################################################################################################
 import wandb
-wandb.init(project='VideoCLIP reproduction')
+wandb.init(project='VideoCLIP from win')
 ##############################################################################################################################
 
 # We need to setup root logger before importing any fairseq libraries.

@@ -57,6 +57,7 @@ def infer_init_method(cfg: DistributedTrainingConfig, force_distributed=False):
         key in os.environ
         for key in ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]
     ):
+    
         # support torch.distributed.launch
         _infer_torch_distributed_launch_init(cfg)
     else:
@@ -271,10 +272,16 @@ def _pipeline_parallel_post_init(
 
 
 def distributed_init(cfg: FairseqConfig):
+    ##############################################################################################################
+    print('distributed backend at the biginning of init = ', cfg.distributed_training.distributed_backend)
+    ##############################################################################################################
     if isinstance(cfg, Namespace):
         from fairseq.dataclass.utils import convert_namespace_to_omegaconf
         cfg = convert_namespace_to_omegaconf(cfg)
-
+    
+    ##############################################################################################################
+    print('distributed backend before tpu chcek = ', cfg.distributed_training.distributed_backend)
+    ##############################################################################################################
     if not cfg.common.tpu:
         if torch.distributed.is_available() and torch.distributed.is_initialized():
             warnings.warn(
@@ -287,6 +294,9 @@ def distributed_init(cfg: FairseqConfig):
                     cfg.distributed_training.distributed_init_method,
                 )
             )
+            #################################################################################################################
+            print('distributed backend in call = ', cfg.distributed_training.distributed_backend)
+            #################################################################################################################
             dist.init_process_group(
                 backend=cfg.distributed_training.distributed_backend,
                 init_method=cfg.distributed_training.distributed_init_method,
@@ -365,9 +375,15 @@ def distributed_main(i, main, cfg: FairseqConfig, kwargs):
 
 
 def call_main(cfg: FairseqConfig, main, **kwargs):
+    ###################################################################################################################
+    print('backend in the begininng of call_main = ', cfg.distributed_training.distributed_backend)
+    ###################################################################################################################
     if cfg.distributed_training.distributed_init_method is None:
         infer_init_method(cfg.distributed_training)
 
+    ###################################################################################################################
+    print('backend after infer init method = ', cfg.distributed_training.distributed_backend)
+    ###################################################################################################################
     if cfg.distributed_training.distributed_init_method is not None:
         # distributed training
         if not cfg.distributed_training.distributed_no_spawn:
