@@ -3,12 +3,13 @@ task_type: local_predict
 dataset:
   split: test
   video_processor: VideoProcessor
-  aligner: COINActionSegmentationAligner
+  aligner: The50saladsActionSegmentationAligner
   bert_name: bert-base-uncased
-  test_path: data/coin/COIN.json
-  meta_processor: 50saladsActionSegmentationMetaProcessor
-  vfeat_dir: G:\IChuviliaeva\Data\50salads_i3d_diff_pool_back_cut
-  text_processor: COINActionSegmentationTextProcessor
+  meta_processor: The50saladsActionSegmentationMetaProcessor
+  vfeat_dir: /home/irene/Desktop/mag_degree/data/50salads/features
+  text_processor: The50saladsActionSegmentationTextProcessor
+  gt_path: /home/irene/Desktop/mag_degree/data/50salads/groundTruth
+  mapping_path: /home/irene/Desktop/mag_degree/data/50salads/mapping.txt
   num_iso_layer: 12
   sliding_window: 16
   sliding_window_size: 32
@@ -28,6 +29,6 @@ model:
   text_encoder_cls: BertModel
   num_hidden_video_layers: 6
 eval:
-  save_path: runs/retri/videoclip/coin_zs/eval
+  save_path: /home/irene/Desktop/mag_degree/50salads_VideoCLIP
 metric: COINActionSegmentationMetric
 predictor: COINZSPredictor

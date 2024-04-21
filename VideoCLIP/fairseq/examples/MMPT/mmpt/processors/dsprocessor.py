@@ -851,62 +851,131 @@ class DiDeMoAligner(DSAligner):
 
 
 # --------------------- 50salads -------------------------
-# stupid way so far
 #
-class 50saladsActionSegmentationMetaProcessor(MetaProcessor):
+# не понятно, где лучше менять форму: здесь в предсказании или в I3D (тогда надо будет сюда отдельные фичи считать)
+# форму стоит поменять в предсказании, проверить, что собирается
+# да len(gt) == vfeature.shape[1] - специально обрезала, 30 fps
+# есть некоторая слабая надежда, что predictor будет отличать gt от предсказаний и считать метрику сам. 
+# Скорее всего, predictor надо будет списать у COIN. Может даже просто заменить, но там вопросы к пустому классу  
+
+# Видосы в салатах длинее и само действие может повторяться - с этим бы поаккуратнее
+class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
 
     def __init__(self, config):
         super().__init__(config)
-        with open(self._get_split_path(config)) as fr:
-            database = json.load(fr)["database"]
-        id2label = {}
-        data = []
-        # filter the data by split.
-        for video_id, rec in database.items():
-            # always use testing to determine label_set
-            if rec["subset"] == "testing":
-                for segment in rec["annotation"]:
-                    id2label[int(segment["id"])] = segment["label"]
-        # text_labels is used for ZS setting
-        self.text_labels = ["none"] * len(id2label)
-        for label_id in id2label:
-            self.text_labels[label_id-1] = id2label[label_id]
-
-        id2label[0] = "O"
-        print("num of labels", len(id2label))
-
-        for video_id, rec in database.items():
-            if not os.path.isfile(os.path.join(config.vfeat_dir, video_id + ".npy")):
-                continue
-            if rec["subset"] == COINActionSegmentationMetaProcessor.split_map[self.split]:
-                starts, ends, labels = [], [], []
-                for segment in rec["annotation"]:
-                    start, end = segment["segment"]
-                    label = int(segment["id"])
-                    starts.append(start)
-                    ends.append(end)
-                    labels.append(label)
-                data.append(
-                    (video_id, {"start": starts, "end": ends, "label": labels}))
-        self.data = data
-
-    def meta_text_labels(self, config):
-        from transformers import default_data_collator
-        from ..utils import get_local_rank
-
-        text_processor = TextProcessor(config)
-        binarizer = MetaTextBinarizer(config)
-        # TODO: add prompts to .yaml.
-        text_labels = [label for label in self.text_labels]
-
-        if get_local_rank() == 0:
-            print(text_labels)
-
-        outputs = []
-        for text_label in text_labels:
-            text_feature = text_processor(text_label)
-            outputs.append(binarizer(text_feature))
-        return default_data_collator(outputs)
-
+        self.text_labels = []
+        text2label = {}
+        
+        with open(config.mapping_path, 'r') as f:
+            for line in f.readlines():
+                splitted = line.split()
+                self.text_labels.append(splitted[1])
+                text2label[splitted[1]] = int(splitted[0])
+         
+        
+        self.data = []
+        starts, ends, labels = [], [], []
+        starts.append(0)
+        
+        # спокойно, там просто читалка файлов
+        video_processor = VideoProcessor(config)
+        for f in os.listdir(config.vfeat_dir):
+            vfeat_id = f.split('.')[0]
+            gt_file = os.path.join(config.gt_path, vfeat_id + ".txt")
+            vfeatures = video_processor(vfeat_id)
+            
+            with open(gt_file, 'r') as gtf:
+                all_lines = gtf.readlines()
+            prev = all_lines[0].split()[0]
+            starts, ends, labels = [], [], []
+            
+            for t, line in enumerate(all_lines):
+                if line.split()[0] != prev:
+                    ends.append((t - 1) / 30)
+                    starts.append(t / 30)
+                    labels.append(text2label[prev])
+                    prev = line.split()[0]
+                        
+            ends.append((len(all_lines) - 1) / 30)
+            labels.append(text2label[prev])                
+            self.data.append((vfeat_id, {"start": starts, "end": ends, "label": labels}))
+            
+        
     def __getitem__(self, idx):
         return self.data[idx]
+        
+    def meta_text_labels(self, config):
+        raise NotEmplementedError
+    
+class The50saladsActionSegmentationTextProcessor(TextProcessor):
+    def __call__(self, text_label):
+        return text_label
+        
+
+class The50saladsActionSegmentationAligner(Aligner):
+    """
+    Almost similar to the COINZSAligner
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.sliding_window = config.sliding_window
+        self.sliding_window_size = config.sliding_window_size
+        
+    def __call__(self, video_id, video_feature, text_feature):
+        starts, ends, label_ids = text_feature["start"], text_feature["end"], text_feature["label"]
+        
+        vfeats, vmasks, targets = [], [], []
+        # sliding window.
+        video_len = len(video_feature)
+        for window_start in range(0, video_len, self.sliding_window):
+            clip_start = 0
+            clip_end = min(video_len - window_start, self.sliding_window_size)
+            clip = {"start": [clip_start], "end": [clip_end]}
+            
+            vfeat, vmask = self._build_video_seq(
+                video_feature[window_start: window_start + clip_end],
+                clip
+            )
+                
+            # covers video length only
+            target = torch.full_like(vmask, -100, dtype=torch.long)
+            target[vmask] = 0
+            for start, end, label_id in zip(starts, ends, label_ids):
+                if (window_start < end) and (start < (window_start + clip_end)):
+                    start_offset = max(0, math.floor(start) - window_start)
+                    end_offset = min(clip_end, math.ceil(end) - window_start)
+                    target[start_offset:end_offset] = label_id
+            vfeats.append(vfeat)
+            vmasks.append(vmask)
+            targets.append(target)
+            if (video_len - window_start) <= self.sliding_window_size:
+                break
+                   
+        vfeats = torch.stack(vfeats)
+        vmasks = torch.stack(vmasks)
+        targets = torch.stack(targets)
+        video_targets = torch.full((video_len,), 0)
+        for start, end, label_id in zip(starts, ends, label_ids):
+            start_offset = max(0, math.floor(start))
+            end_offset = min(video_len, math.ceil(end))
+            video_targets[start_offset:end_offset] = label_id
+
+        caps = torch.LongTensor(
+            [[self.cls_token_id, self.sep_token_id,
+              self.pad_token_id, self.sep_token_id]],
+            ).repeat(vfeats.size(0), 1)
+        cmasks = torch.BoolTensor(
+            [[0, 1, 0, 1]]  # pad are valid for attention.
+            ).repeat(vfeats.size(0), 1)
+        return {
+            "caps": caps,
+            "cmasks": cmasks,
+            "vfeats": vfeats,  # X for original code.
+            "vmasks": vmasks,
+            "targets": targets,
+            "video_id": video_id,
+            "video_len": video_len,  # for later checking.
+            "video_targets": video_targets
+        }
+
+        
