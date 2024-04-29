@@ -593,3 +593,162 @@ class DiDeMoPredictor(Predictor):
     def _aggregate_scores(self, scores):
         self.full_scores = []
         return scores
+        
+        
+#########################################50salads######################################################
+
+class The50saladsPredictor(Predictor):
+    """    
+    should be similar to CrossTask on sliding windows.
+    """
+    def __init__(self, config):
+        super().__init__(config)
+        self.max_video_len = config.dataset.max_video_len
+        self.sliding_window = config.dataset.sliding_window
+        self.sliding_window_size = config.dataset.sliding_window_size
+
+    def predict_loop(self, model, eval_dataloader, output_file="result.pkl"):
+        """refactored from COIN's"""
+        
+        ctx = 0
+        model.eval()
+        model = model.to(ctx)
+        # this is not a loss but just compute neg_log_prob.
+        Y_pred = []
+        Y_true = []
+        with torch.no_grad():
+            for batch in eval_dataloader:
+                self(batch, model, Y_pred, Y_true)
+        return self.finalize(Y_pred, Y_true, output_file)
+
+    def __call__(self, sample, model, Y_pred, Y_true):
+        sample = self.to_ctx(sample)
+        # compute the average logits over sliding windows.
+        output = model(**sample)
+        logits = self._merge_windows(sample, output)
+        Y_pred.append(logits.argmax(dim=1))
+        Y_true.append(sample["video_targets"].squeeze(0).cpu())
+
+    def _merge_windows(self, sample, output):
+        targets = sample["targets"].reshape(-1).cpu()
+        valid_mask = targets != -100
+        targets = targets[valid_mask]
+      
+        batch_logits = output["logits"].cpu()
+        batch_logits = batch_logits.reshape(-1, batch_logits.size(-1))
+        batch_logits = batch_logits[valid_mask]
+        video_len = sample["video_len"][0]
+
+        # the following version is slow.
+        logits = torch.zeros((video_len, batch_logits.size(1)))
+        logits_counts = torch.zeros((video_len, 1), dtype=torch.long)
+        # use the same loop as aligner to recover.
+        batch_logit_idx = 0
+        for window_start in range(0, video_len, self.sliding_window):
+            video_end = min(video_len - window_start, self.sliding_window_size)
+            
+            logits[window_start: window_start + video_end] += batch_logits[
+                batch_logit_idx: batch_logit_idx + video_end]
+            batch_logit_idx += video_end
+            logits_counts[window_start: window_start + video_end] += torch.ones((video_end, 1), dtype=torch.long)
+            if (video_len - window_start) <= self.sliding_window_size:
+                break
+        logits /= logits_counts
+        assert logits.size() == (video_len, batch_logits.size(1)), "{}, {}".format(logits.size(), video_len)
+        return logits
+
+    def finalize(self, Y_pred, Y_true, output_file=None):
+        Y_pred = torch.cat(Y_pred, dim=0).numpy()
+        Y_true = torch.cat(Y_true, dim=0).numpy()
+        assert len(Y_pred) == len(Y_true)
+
+        error_mask = Y_pred != Y_true
+        print("sample error", Y_pred[error_mask][:10], Y_true[error_mask][:10])
+        print("sample error", Y_pred[error_mask][10:20], Y_true[error_mask][10:20])
+
+        if output_file is not None:
+            with open(
+                    os.path.join(self.pred_dir, output_file + ".pkl"),
+                    "wb") as fw:
+                pickle.dump(
+                    {"Y_pred": Y_pred, "Y_true": Y_true}, fw,
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        return {"outputs": Y_pred, "targets": Y_true}
+
+
+class The50saladsZSPredictor(The50saladsPredictor):
+    """
+    50saladsZSPredictor for 50salads zero-shot prediction.
+    Highly used COIN's
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.dataset_config = config.dataset
+
+    def predict_loop(self, model, eval_dataloader, output_file="result.pkl"):
+        """refactored from line 144:
+        https://github.com/DmZhukov/CrossTask/blob/master/train.py
+        """
+        ctx = 0
+        model.eval()
+        model = model.to(ctx)
+
+        with torch.no_grad():
+            outputs = eval_dataloader.dataset.meta_processor.meta_text_labels(
+                self.dataset_config)
+            outputs = self.to_ctx(outputs, ctx)
+            label_hidden_states = model.forward_text(**outputs).cpu()
+            
+        # this is not a loss but just compute neg_log_prob.
+        Y_pred = []
+        Y_true = []
+        with torch.no_grad():
+            for batch in eval_dataloader:
+                self(batch, label_hidden_states, model, Y_pred, Y_true)
+        return self.finalize(Y_pred, Y_true, output_file)
+
+    def reshape_subsample(self, sample):
+        for key in sample:
+            if torch.is_tensor(sample[key]):
+                sample[key] = self.flat_subsample(sample[key])
+        return sample
+
+    def flat_subsample(self, tensor):
+        if len(tensor.size()) > 1 and tensor.size(0) == 1:
+            tensor = tensor.squeeze(0)
+        return tensor
+
+    def __call__(self, sample, label_hidden_states, model, Y_pred, Y_true):
+        sample = self.reshape_subsample(sample)
+        sample = self.to_ctx(sample)
+        # compute the average logits over sliding windows.
+        sample["output_hidden_states"] = True
+        
+        video_outputs = model.forward_video(**sample).cpu()
+        output = {"logits": video_outputs[:, 1:sample["vmasks"].size(1)+1] @ label_hidden_states.t()}
+        
+        logits = self._merge_windows(sample, output)
+        pred = logits.argmax(dim=1)
+        
+        Y_pred.append(pred)
+        Y_true.append(sample["video_targets"].squeeze(0).cpu())
+        
+    def finalize(self, Y_pred, Y_true, output_file=None):
+        Y_pred = torch.cat(Y_pred, dim=0).numpy()
+        Y_true = torch.cat(Y_true, dim=0).numpy()
+        assert len(Y_pred) == len(Y_true)
+
+        error_mask = Y_pred != Y_true
+        print("sample error", Y_pred[error_mask][:10], Y_true[error_mask][:10])
+        print("sample error", Y_pred[error_mask][10:20], Y_true[error_mask][10:20])
+
+        if output_file is not None:
+            with open(
+                    os.path.join(self.pred_dir, output_file + ".pkl"),
+                    "wb") as fw:
+                pickle.dump(
+                    {"Y_pred": Y_pred, "Y_true": Y_true}, fw,
+                    protocol=pickle.HIGHEST_PROTOCOL)
+        return {"outputs": Y_pred, "targets": Y_true}
+        

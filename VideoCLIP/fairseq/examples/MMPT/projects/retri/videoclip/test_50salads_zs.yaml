@@ -2,7 +2,7 @@ slurm_config: big
 task_type: local_predict
 dataset:
   split: test
-  video_processor: VideoProcessor
+  video_processor: The50saladsActionSegmentationVideoProcessor
   aligner: The50saladsActionSegmentationAligner
   bert_name: bert-base-uncased
   meta_processor: The50saladsActionSegmentationMetaProcessor
@@ -19,7 +19,7 @@ fairseq:
   dataset:
     batch_size: 1
     valid_subset: test
-    num_workers: 2
+    num_workers: 1 # was 2
   common_eval:
     path: runs/retri/videoclip/checkpoint_best.pt
 model:
@@ -30,5 +30,5 @@ model:
   num_hidden_video_layers: 6
 eval:
   save_path: /home/irene/Desktop/mag_degree/50salads_VideoCLIP
-metric: COINActionSegmentationMetric
-predictor: COINZSPredictor
+metric: The50saladsActionSegmentationMetric
+predictor: The50saladsZSPredictor

@@ -853,12 +853,12 @@ class DiDeMoAligner(DSAligner):
 # --------------------- 50salads -------------------------
 #
 # не понятно, где лучше менять форму: здесь в предсказании или в I3D (тогда надо будет сюда отдельные фичи считать)
-# форму стоит поменять в предсказании, проверить, что собирается
+# пока форму поменяла в при чтении, поэтому такая страшная обрезка в процессоре для видео.
 # да len(gt) == vfeature.shape[1] - специально обрезала, 30 fps
-# есть некоторая слабая надежда, что predictor будет отличать gt от предсказаний и считать метрику сам. 
-# Скорее всего, predictor надо будет списать у COIN. Может даже просто заменить, но там вопросы к пустому классу  
+# Видосы в салатах длинее, чем в COIN - это вызывает сложности на маленьких машинах, т. к. пропускаем через модель всё видео целиком.
+# Accuracy считать научилась, predictor различает gt и prediction. Левенштейн из ASFormer какой-то слишком долгий и требующий много памяти, но на маленьких кусках работает.
+# Опять же, плохо пропускать видос целиком, но с COIN работают именно так.
 
-# Видосы в салатах длинее и само действие может повторяться - с этим бы поаккуратнее
 class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
 
     def __init__(self, config):
@@ -878,7 +878,7 @@ class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
         starts.append(0)
         
         # спокойно, там просто читалка файлов
-        video_processor = VideoProcessor(config)
+        video_processor = The50saladsActionSegmentationVideoProcessor(config)
         for f in os.listdir(config.vfeat_dir):
             vfeat_id = f.split('.')[0]
             gt_file = os.path.join(config.gt_path, vfeat_id + ".txt")
@@ -888,7 +888,7 @@ class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
                 all_lines = gtf.readlines()
             prev = all_lines[0].split()[0]
             starts, ends, labels = [], [], []
-            
+            starts.append(0.0)
             for t, line in enumerate(all_lines):
                 if line.split()[0] != prev:
                     ends.append((t - 1) / 30)
@@ -905,11 +905,39 @@ class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
         return self.data[idx]
         
     def meta_text_labels(self, config):
-        raise NotEmplementedError
+        from transformers import default_data_collator
+        from ..utils import get_local_rank
+
+        text_processor = TextProcessor(config)
+        binarizer = MetaTextBinarizer(config)
+        # TODO: add prompts to .yaml.
+        text_labels = [label for label in self.text_labels]
+
+        if get_local_rank() == 0:
+            print('text_labels = ', text_labels)
+        
+        outputs = []
+        for text_label in text_labels:
+            text_feature = text_processor(text_label)
+            outputs.append(binarizer(text_feature))
+            
+        return default_data_collator(outputs)
+        
     
 class The50saladsActionSegmentationTextProcessor(TextProcessor):
     def __call__(self, text_label):
         return text_label
+        
+class The50saladsActionSegmentationVideoProcessor(VideoProcessor):
+    def __call__(self, video_fn):
+        if isinstance(video_fn, tuple):
+            video_fn = video_fn[0]
+        assert isinstance(video_fn, str)
+        video_fn = os.path.join(self.vfeat_dir, video_fn + ".npy")
+        feat = np.load(video_fn)
+        
+        permuted_feat = np.load(video_fn).transpose(1, 0)[100:600, :512]
+        return permuted_feat
         
 
 class The50saladsActionSegmentationAligner(Aligner):

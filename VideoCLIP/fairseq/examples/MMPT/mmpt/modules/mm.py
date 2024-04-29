@@ -35,7 +35,8 @@ class VideoTokenMLP(nn.Module):
         super().__init__()
         #############################################################################################################
         # input_dim = config.input_dim if hasattr(config, "input_dim") else 512
-        input_dim = 1024
+        # input_dim = 1024
+        input_dim = 512
         #############################################################################################################
         self.linear1 = nn.Linear(input_dim, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size)

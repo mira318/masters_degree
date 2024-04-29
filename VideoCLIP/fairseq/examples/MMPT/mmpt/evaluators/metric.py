@@ -311,3 +311,54 @@ class ActionRecognitionMetric(Metric):
                 metrics["r10_splits"][split],
                 )
             )
+            
+#------------------------------------------50salads-------------------------------------------------------------
+
+def levenstein(p, y, norm=False):
+    """
+    From ASFormer
+    """
+    m_row = len(p)    
+    n_col = len(y)
+    D = np.zeros([m_row+1, n_col+1], np.float32)
+    for i in range(m_row+1):
+        D[i, 0] = i
+    for i in range(n_col+1):
+        D[0, i] = i
+ 
+    for j in range(1, n_col+1):
+        for i in range(1, m_row+1):
+            if y[j-1] == p[i-1]:
+                D[i, j] = D[i-1, j-1]
+            else:
+                D[i, j] = min(D[i-1, j] + 1,
+                              D[i, j-1] + 1,
+                              D[i-1, j-1] + 1)
+     
+    if norm:
+        score = (1 - D[-1, -1]/max(m_row, n_col)) * 100
+    else:
+        score = D[-1, -1]
+ 
+    return score
+
+class The50saladsActionSegmentationMetric(Metric):
+    """
+    should be accuracy, edit dist, f1@10, f1@25, f1@50
+    """
+    def __init__(self, config, metric_name=["frame_acc", "edit_dist"]):
+        super().__init__(config, metric_name)
+
+    def compute_metrics(self, outputs, targets):
+        n_frames = 0
+        n_errors = 0
+        n_errors = sum(outputs != targets)
+        n_frames = len(targets)
+        # edit_dist = levenstein(outputs, targets, True)
+        return {"frame_acc": 1.0 - float(n_errors) / n_frames}    # , "edit_dist": edit_dist}
+
+    def print_computed_metrics(self, metrics):
+        fa = metrics["frame_acc"]
+        # edit = metrics["edit_dist"]
+        print("frame accuracy:", fa)
+        # print("segment labels edit dist:", edit)

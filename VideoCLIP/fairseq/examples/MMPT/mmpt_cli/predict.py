@@ -18,6 +18,11 @@ from mmpt.tasks import Task
 from mmpt import processors
 from mmpt.datasets import MMDataset
 
+######################################################################################################
+import wandb
+wandb.init(project='VideoCLIP from win')
+######################################################################################################
+
 
 def get_dataloader(config):
     meta_processor_cls = getattr(processors, config.dataset.meta_processor)
