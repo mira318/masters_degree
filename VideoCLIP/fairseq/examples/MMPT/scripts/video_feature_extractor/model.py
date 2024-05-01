@@ -31,8 +31,8 @@ def get_model(args):
         from mmpt.processors.models.s3dg import S3D
 
         ###############################################################################
-        model = S3D('./../../../pretrained_models/s3d_dict.npy', 512)
-        model.load_state_dict(th.load('./../../../pretrained_models/s3d_howto100m.pth'))
+        model = S3D('/home/irene/Desktop/mag_degree/masters_degree/VideoCLIP/fairseq/examples/MMPT/pretrained_models/s3d_dict.npy', 512)
+        model.load_state_dict(th.load('/home/irene/Desktop/mag_degree/masters_degree/VideoCLIP/fairseq/examples/MMPT/pretrained_models/s3d_howto100m.pth'))
         ###############################################################################
 
         model = model.cuda()
