@@ -853,7 +853,7 @@ class DiDeMoAligner(DSAligner):
 # --------------------- 50salads -------------------------
 #
 # не понятно, где лучше менять форму: здесь в предсказании или в I3D (тогда надо будет сюда отдельные фичи считать)
-# пока форму поменяла в при чтении, поэтому такая страшная обрезка в процессоре для видео.
+# пока форму поменяла при чтении, поэтому такая страшная обрезка в процессоре для видео.
 # да len(gt) == vfeature.shape[1] - специально обрезала, 30 fps
 # Видосы в салатах длинее, чем в COIN - это вызывает сложности на маленьких машинах, т. к. пропускаем через модель всё видео целиком.
 # Accuracy считать научилась, predictor различает gt и prediction. Левенштейн из ASFormer какой-то слишком долгий и требующий много памяти, но на маленьких кусках работает.
@@ -934,10 +934,7 @@ class The50saladsActionSegmentationVideoProcessor(VideoProcessor):
             video_fn = video_fn[0]
         assert isinstance(video_fn, str)
         video_fn = os.path.join(self.vfeat_dir, video_fn + ".npy")
-        feat = np.load(video_fn)
-        
-        permuted_feat = np.load(video_fn).transpose(1, 0)[100:600, :512]
-        return permuted_feat
+        return np.load(video_fn)
         
 
 class The50saladsActionSegmentationAligner(Aligner):

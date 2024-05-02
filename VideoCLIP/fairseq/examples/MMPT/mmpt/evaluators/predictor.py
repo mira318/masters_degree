@@ -12,7 +12,6 @@ import math
 
 from tqdm import tqdm
 
-
 class Predictor(object):
     """this base class is used to save predictions to disk
         (and being called by a evaluator later).

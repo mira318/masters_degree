@@ -55,10 +55,10 @@ class Shard(object):
 
 if __name__ == "__main__":
     shard = Shard(
-        "G:\\IChuviliaeva\Data\\howto100m_s3d_features\\howto100m_s3d_features",
-        "G:\\IChuviliaeva\\Data\\howTo100M_meta\\raw_caption_dedup.bert-base-uncased",
-        "G:\\IChuviliaeva\\Data\\howto100m_s3d_features\\feat_how2_s3d_shard_small",
-        ["G:\\IChuviliaeva\\Data\\howTo100M_meta\\how2_s3d_train.lst", "G:\\IChuviliaeva\\Data\\howTo100M_meta\\how2_s3d_val.lst"]
+        "G:\\IChuviliaeva\\Data\\50salads_s3d\\net_features",
+        "G:\\IChuviliaeva\\Data\\50salads_s3d\\raw_caption_dedup.bert-base-uncased",
+        "G:\\IChuviliaeva\\Data\\50salads_s3d\\shard_features",
+        ["G:\\IChuviliaeva\\Data\\50salads_s3d\\meta\\train.lst", "G:\\IChuviliaeva\\Data\\50salads_s3d\\meta\\val.lst"]
     )
 
     shard()

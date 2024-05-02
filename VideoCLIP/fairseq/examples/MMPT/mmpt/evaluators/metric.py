@@ -6,7 +6,6 @@
 import numpy as np
 import json
 
-
 class Metric(object):
     def __init__(self, config, metric_names):
         self.metric_names = metric_names
@@ -355,7 +354,7 @@ class The50saladsActionSegmentationMetric(Metric):
         n_errors = sum(outputs != targets)
         n_frames = len(targets)
         # edit_dist = levenstein(outputs, targets, True)
-        return {"frame_acc": 1.0 - float(n_errors) / n_frames}    # , "edit_dist": edit_dist}
+        return {"frame_acc": 1.0 - float(n_errors) / n_frames} #, "edit_dist": edit_dist}
 
     def print_computed_metrics(self, metrics):
         fa = metrics["frame_acc"]

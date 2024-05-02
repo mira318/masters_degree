@@ -91,13 +91,16 @@ dataset = VideoLoader(
     hflip=args.hflip
 )
 n_dataset = len(dataset)
+print('n_dataset = ', n_dataset)
 sampler = RandomSequenceSampler(n_dataset, 10)
 loader = DataLoader(
     dataset,
     batch_size=1,
     shuffle=False,
-    num_workers=args.num_decoding_thread,
-    sampler=sampler if n_dataset > 10 else None,
+    #########################################################################################################################
+    # num_workers=args.num_decoding_thread,
+    # sampler=sampler if n_dataset > 10 else None,
+    #########################################################################################################################
 )
 preprocess = Preprocessing(args.type)
 model = get_model(args)

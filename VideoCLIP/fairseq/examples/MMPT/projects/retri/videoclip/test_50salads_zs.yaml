@@ -6,10 +6,10 @@ dataset:
   aligner: The50saladsActionSegmentationAligner
   bert_name: bert-base-uncased
   meta_processor: The50saladsActionSegmentationMetaProcessor
-  vfeat_dir: /home/irene/Desktop/mag_degree/data/50salads/features
+  vfeat_dir: G:\IChuviliaeva\Data\50salads_s3d\net_features
   text_processor: The50saladsActionSegmentationTextProcessor
-  gt_path: /home/irene/Desktop/mag_degree/data/50salads/groundTruth
-  mapping_path: /home/irene/Desktop/mag_degree/data/50salads/mapping.txt
+  gt_path: G:\IChuviliaeva\Data\50salads_gt
+  mapping_path: G:\IChuviliaeva\Data\50salads_gt\mapping.txt
   num_iso_layer: 12
   sliding_window: 16
   sliding_window_size: 32
@@ -21,7 +21,8 @@ fairseq:
     valid_subset: test
     num_workers: 1 # was 2
   common_eval:
-    path: runs/retri/videoclip/checkpoint_best.pt
+    path: runs\retri\videoclip\checkpoint_best.pt
+    wandb_project: 'VideoCLIP from win'
 model:
   model_cls: MMFusionSeparate
   mm_encoder_cls: null
@@ -29,6 +30,6 @@ model:
   text_encoder_cls: BertModel
   num_hidden_video_layers: 6
 eval:
-  save_path: /home/irene/Desktop/mag_degree/50salads_VideoCLIP
+  save_path: G:\IChuviliaeva\Data\VCLIP_50salads_runs\testing
 metric: The50saladsActionSegmentationMetric
 predictor: The50saladsZSPredictor
