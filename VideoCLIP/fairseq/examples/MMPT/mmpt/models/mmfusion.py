@@ -15,6 +15,18 @@
 # limitations under the License.
 # Copyright (c) Facebook, Inc. All Rights Reserved
 
+import importlib.util
+import sys
+spec = importlib.util.spec_from_file_location("eval", "//home//irene//Desktop//mag_degree//masters_degree//ASFormer//eval.py")
+ASF_eval = importlib.util.module_from_spec(spec)
+sys.modules["eval"] = ASF_eval
+spec.loader.exec_module(ASF_eval)
+
+spec = importlib.util.spec_from_file_location("model", "//home//irene//Desktop//mag_degree//masters_degree//ASFormer//model.py")
+ASF_model = importlib.util.module_from_spec(spec)
+sys.modules["ASF_model"] = ASF_model
+spec.loader.exec_module(ASF_model)
+from ASF_model import MyTransformer
 
 import torch
 
@@ -925,3 +937,197 @@ class MMFusionShareActionLocalization(MMFusionShare):
         # this line is not right.
         logits = torch.mm(video_seq, pooled_text.transpose(1, 0))
         return {"logits": logits}
+        
+#--------------------------------------------for ASF------------------------------------------------------
+
+class MMFusionSeparateASF(MMFusionShare):
+    def __init__(self, config, **kwargs):
+        super().__init__()
+        transformer_config = AutoConfig.from_pretrained(
+            config.dataset.bert_name)
+        self.hidden_size = transformer_config.hidden_size
+        self.is_train = False
+        if config.dataset.train_path is not None:
+            self.is_train = True
+        # 0 means no iso; 1-12 means iso up to that layer.
+        self.num_hidden_layers = transformer_config.num_hidden_layers
+        self.last_iso_layer = 0
+        if config.dataset.num_iso_layer is not None:
+            self.last_iso_layer = config.dataset.num_iso_layer - 1 + 1
+
+        from ASFormer.model import MyTransformer
+        if config.model.text_encoder_cls is not None:
+         
+            model_config = AutoConfig.from_pretrained(config.dataset.bert_name)
+            model_config.max_video_len = config.dataset.max_video_len
+            
+            ############################################################ from ASFormer ###################################################################
+            num_layers = 10
+            num_f_maps = 64
+            features_dim = 1024
+            r1 = 2
+            r2 = 2
+            channel_mask_rate = 0.3
+            print('config.model.ASF_classes = ', config.model.ASF_classes)
+            self.video_encoder = MyTransformer(3, num_layers, r1, r2, num_f_maps, input_dim, config.model.ASF_classes, channel_masking_rate)
+            ############################################################ from ASFormer ###################################################################
+            
+            # exact same NLP model from Huggingface.
+            text_encoder_cls = getattr(transformermodel, config.model.text_encoder_cls)
+            self.text_encoder = text_encoder_cls.from_pretrained(config.dataset.bert_name)
+            
+        else:
+            raise ValueError("the encoder must be either MM or two backbones.")
+    
+    
+    def forward(
+        self,
+        caps,
+        cmasks,
+        vfeats,
+        vmasks,
+        attention_mask=None,
+        video_label=None,
+        text_label=None,
+        output_hidden_states=False,
+        **kwargs
+    ):
+
+        pooled_video = self.forward_video(
+            vfeats,
+            vmasks,
+            caps,
+            cmasks,
+            output_hidden_states
+        )
+
+        
+        pooled_text = self.forward_text(
+            caps,
+            cmasks,
+            output_hidden_states
+        )
+
+        return {"pooled_video": pooled_video, "pooled_text": pooled_text}
+        
+    
+    def forward_video(
+        self,
+        vfeats,
+        vmasks,
+        caps,
+        cmasks,
+        output_hidden_states=False,
+        **kwargs
+    ):
+        input_ids = caps[:, :2]
+        attention_mask = torch.cat([
+            cmasks[:, :1],
+            vmasks,
+            cmasks[:, 1:2]
+        ], dim=1)
+
+        token_type_ids = torch.zeros(
+            (vmasks.size(0), vmasks.size(1) + 2),
+            dtype=torch.long,
+            device=vmasks.device)
+
+        #####################################################################################from ASFormer###########################################################################
+        # надо понять, чего за маска и чего за hidden_states...
+        # маска наверняка похожа на местную - т. к. всё ещё трансформеры.
+        ps = self.video_encoder(vfeats, attention_mask)
+        video_outputs = outputs[0]
+        print('video_outputs.shape = ', video_outputs.shape)
+        #####################################################################################from ASFormer###########################################################################
+
+        if output_hidden_states:
+            #########################################################################################################################################################################
+            print('output_hidden_states in MMFusionSeparateASF!')
+            #########################################################################################################################################################################
+            return video_outputs
+
+        batch_size = cmasks.size(0)
+        #########################################################################################################################################################################
+        print('batch_size = ', batch_size)
+        #########################################################################################################################################################################
+            
+
+        video_attention_mask = torch.cat(
+            [
+                torch.zeros(
+                    (batch_size, 1), dtype=torch.bool, device=vmasks.device),
+                vmasks,
+                torch.ones(
+                    (batch_size, 1), dtype=torch.bool, device=vmasks.device),
+            ],
+            dim=1,
+        )
+        #########################################################################################################################################################################
+        print('video_attention_mask.shape = ', video_attention_mask.shape)
+        #########################################################################################################################################################################
+        
+        assert video_outputs.size(1) == video_attention_mask.size(1)
+
+        video_attention_mask = video_attention_mask.type(video_outputs.dtype) \
+            / video_attention_mask.sum(1, keepdim=True)
+
+        pooled_video = torch.bmm(
+            video_outputs.transpose(2, 1),
+            video_attention_mask.unsqueeze(2)
+        ).squeeze(-1)
+        #########################################################################################################################################################################
+        print('pooled_video.shape = ', pooled_video.shape)
+        #########################################################################################################################################################################
+        return pooled_video  # video_outputs
+
+    def forward_text(
+        self,
+        caps,
+        cmasks,
+        output_hidden_states=False,
+        **kwargs
+    ):
+        input_ids = torch.cat([
+            caps[:, :1], caps[:, 2:],
+            ], dim=1)
+
+        attention_mask = torch.cat([
+            cmasks[:, :1],
+            cmasks[:, 2:]
+        ], dim=1)
+        # different from sharing, we use all-0 type.
+        token_type_ids = torch.zeros(
+            (cmasks.size(0), cmasks.size(1) - 1),
+            dtype=torch.long,
+            device=cmasks.device)
+
+        outputs = self.text_encoder(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            output_hidden_states=True
+        )
+        text_outputs = outputs[0]
+
+        if output_hidden_states:
+            return text_outputs
+
+        batch_size = caps.size(0)
+        # text tokens + [SEP]
+        text_attention_mask = torch.cat([
+            torch.zeros(
+                (batch_size, 1), dtype=torch.bool, device=cmasks.device),
+            cmasks[:, 2:]
+        ], dim=1)
+
+        assert text_outputs.size(1) == text_attention_mask.size(1)
+
+        text_attention_mask = text_attention_mask.type(text_outputs.dtype) \
+            / text_attention_mask.sum(1, keepdim=True)
+
+        pooled_text = torch.bmm(
+            text_outputs.transpose(2, 1),
+            text_attention_mask.unsqueeze(2)
+        ).squeeze(-1)
+        return pooled_text  # text_outputs
+

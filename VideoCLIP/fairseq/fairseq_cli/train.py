@@ -90,7 +90,7 @@ def main(cfg: FairseqConfig) -> None:
 
     # Setup task, e.g., translation, language modeling, etc.
     task = tasks.setup_task(cfg.task)
-
+    
     assert cfg.criterion, "Please specify criterion to train a model"
 
     # Build model and criterion

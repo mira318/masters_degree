@@ -142,6 +142,9 @@ class MMBertForEncoder(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.videomlp = VideoTokenMLP(config)
+        ############################################################################################################################
+        print('type(videomlp) = ', type(self.videomlp))
+        ############################################################################################################################
         self.bert = MMBertModel(config)
         self.init_weights()
 

@@ -1,11 +1,11 @@
 import numpy as np
 import argparse
-import matplotlib.pyplot as plt
-import seaborn as sns
-import wandb
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# import wandb
 
 
-wandb.init(project='ASFormer on features from I3D')
+# wandb.init(project='ASFormer on features from I3D')
 
 def read_file(path):
     with open(path, 'r') as f:
