@@ -33,14 +33,35 @@ class AttentionHelper(nn.Module):
         m, c2, l2 = proj_key.shape
         
         assert c1 == c2
-        
+        ##################################################################################################################################################
+        proj_key = proj_key.half()
+        proj_query = proj_query.half()
+        # print('proj_key.dtype = ', proj_key.dtype)
+        # print('proj_query.dtype = ', proj_query.dtype)
+        ##################################################################################################################################################
+
         energy = torch.bmm(proj_query.permute(0, 2, 1), proj_key)  # out of shape (B, L1, L2)
+        ##################################################################################################################################################
+        # print('energy.dtype = ', energy.dtype)
+        ##################################################################################################################################################
+
         attention = energy / np.sqrt(c1)
         attention = attention + torch.log(padding_mask + 1e-6) # mask the zero paddings. log(1e-6) for zero paddings
         attention = self.softmax(attention) 
+        
         attention = attention * padding_mask
         attention = attention.permute(0,2,1)
+        ##################################################################################################################################################
+        proj_val = proj_val.half()
+        attention = attention.half()
+        # print('attention.dtype = ', attention.dtype)
+        # print('proj_val.dtype = ', proj_val.dtype)
+        ##################################################################################################################################################
+
         out = torch.bmm(proj_val, attention)
+        ##################################################################################################################################################
+        # print('out.dtype = ', out.dtype)
+        ##################################################################################################################################################
         return out, attention
 
 class AttLayer(nn.Module):
@@ -85,6 +106,10 @@ class AttLayer(nn.Module):
         else:
             value = self.value_conv(x1)
             
+        ############################################################################################################
+        # print('in att layer self.att_type = ', self.att_type)
+        ############################################################################################################
+
         if self.att_type == 'normal_att':
             return self._normal_self_att(query, key, value, mask)
         elif self.att_type == 'block_att':
@@ -134,8 +159,10 @@ class AttLayer(nn.Module):
         _, c2, _ = k.size()
         _, c3, _ = v.size()
         
-        
-        assert m_batchsize == 1  # currently, we only accept input with batch size 1
+        ################################################################################################################
+        # assert m_batchsize == 1  # currently, we only accept input with batch size 1 - trying without it
+        ################################################################################################################
+
         # padding zeros for the last segment
         nb = L // self.bl 
         if L % self.bl != 0:
@@ -143,7 +170,17 @@ class AttLayer(nn.Module):
             k = torch.cat([k, torch.zeros((m_batchsize, c2, self.bl - L % self.bl)).to(device)], dim=-1)
             v = torch.cat([v, torch.zeros((m_batchsize, c3, self.bl - L % self.bl)).to(device)], dim=-1)
             nb += 1
+
+        #################################################################################################################################
+        # print('m_batchsize = ', m_batchsize)
+        # print('L = ', L)
+        # print('c1 = ', c1)
+        # print('c2 = ', c2)
+        # print('c3 = ', c3)
+        ###########################################IT FAILED HERE!!! FROM MASK!!!########################################################
         padding_mask = torch.cat([torch.ones((m_batchsize, 1, L)).to(device) * mask[:,0:1,:], torch.zeros((m_batchsize, 1, self.bl * nb - L)).to(device)],dim=-1)
+        # print('padding_mask.shape = ', padding_mask.shape)
+        #################################################################################################################################
         
         # sliding window approach, by splitting query_proj and key_proj into shape (c1, l) x (c1, 2l)
         # sliding window for query_proj: reshape
@@ -343,8 +380,10 @@ class Trainer:
             while batch_gen.has_next():
                 batch_input, batch_target, mask, vids = batch_gen.next_batch(batch_size, False)
                 batch_input, batch_target, mask = batch_input.to(device), batch_target.to(device), mask.to(device)
+                print('batch_input.shape = ', batch_input.shape)
                 optimizer.zero_grad()
                 ps = self.model(batch_input, mask)
+                print('ps.shape = ', ps.shape)
 
                 loss = 0
                 for p in ps:

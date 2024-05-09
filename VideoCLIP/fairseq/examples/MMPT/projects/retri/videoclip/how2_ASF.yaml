@@ -2,11 +2,11 @@ dataset:
   video_processor: ShardedVideoRetriVideoProcessor
   bert_name: bert-base-uncased
   meta_processor: ShardedHow2VideoRetriMetaProcessor
-  train_path: /home/irene/Desktop/mag_degree/how2mini/how2_ASF_train.lst
-  val_path: /home/irene/Desktop/mag_degree/how2mini/how2_ASF_val.lst
-  vfeat_dir: /home/irene/Desktop/mag_degree/how2mini/features
+  train_path: G:\IChuviliaeva\Data\howTo100M_meta/how2_s3d_train.lst
+  val_path: G:\IChuviliaeva\Data\howTo100M_meta/how2_s3d_val.lst
+  vfeat_dir: G:\IChuviliaeva\Data\howto100m_s3d_features\feat_how2_s3d_shard_small
   text_processor: ShardedVideoRetriTextProcessor
-  tfeat_dir: /home/irene/Desktop/mag_degree/how2mini/feat_how2_s3d_shard_small/raw_caption_dedup.bert-base-uncased.
+  tfeat_dir: G:\IChuviliaeva\Data\howto100m_s3d_features\feat_how2_s3d_shard_small\raw_caption_dedup.bert-base-uncased.
   aligner: VideoRetriOverlappedAligner
   subsampling: 1  # was 1
   sampled_min_len: 8
@@ -24,7 +24,7 @@ dataset:
 fairseq:
   common:
     # wandb_project: 'VideoCLIP'
-    tensorboard_logdir: /home/irene/Desktop/mag_degree/how2mini/logs
+    tensorboard_logdir: G:\IChuviliaeva\Data\howTo100Mruns\logs
     log_interval: 1000
     fp16: true
   dataset:
@@ -43,18 +43,20 @@ fairseq:
     ddp_backend: no_c10d
     max_epoch: 25
   checkpoint:
-    save_dir: /home/irene/Desktop/mag_degree/how2mini/checkpoints
+    save_dir: G:\IChuviliaeva\Data\howTo100Mruns\checkpointsASF
     save_interval_updates: 1024
     keep_interval_updates: 2
     keep_last_epochs: 30
 task_type: sweep_big
 slurm_config: big
 eval:
-  save_path: /home/irene/Desktop/mag_degree/how2mini/eval
+  save_path: G:\IChuviliaeva\Data\howTo100Mruns\eval
 model:
   model_cls: MMFusionSeparateASF
   mm_encoder_cls: null
+  # video_encoder_cls: MMBertForEncoder
   text_encoder_cls: BertModel
+  # num_hidden_video_layers: 6
   input_dim: 1024
   ASF_classes: 12
 loss:

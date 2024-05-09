@@ -55,18 +55,21 @@ class RetriTask(Task):
             meta_processor, video_processor, text_processor, aligner
         )
 
-        retri_sampler = DistributedSampler(self.retri_data)
+        # retri_sampler = DistributedSampler(self.retri_data)
         infer_scale = 16
         batch_size = self.config.dataset.num_video_per_batch \
             * infer_scale
 
+        #######################################################################################################
+        # print('batch_size = ', batch_size)
+        #######################################################################################################
         self.retri_dataloader = DataLoader(
             self.retri_data,
             collate_fn=self.retri_data.collater,
             batch_size=batch_size,
             shuffle=False,
-            sampler=retri_sampler,
-            num_workers=self.config.fairseq.dataset.num_workers
+            # sampler=retri_sampler,
+            # num_workers=self.config.fairseq.dataset.num_workers
         )
         return self.retri_dataloader
 
@@ -176,6 +179,9 @@ class VideoPredictor(Predictor):
         dtype = param.dtype
         device = param.device
         subsample = sample["vfeats"].size(1)
+        ###############################################################################################
+        # print('sample[vfeats].size() = ', sample["vfeats"].size())
+        ###############################################################################################
         sample = self.to_ctx(sample, device, dtype)
         for key in sample:
             if torch.is_tensor(sample[key]):

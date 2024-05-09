@@ -17,16 +17,6 @@
 
 import importlib.util
 import sys
-spec = importlib.util.spec_from_file_location("eval", "//home//irene//Desktop//mag_degree//masters_degree//ASFormer//eval.py")
-ASF_eval = importlib.util.module_from_spec(spec)
-sys.modules["eval"] = ASF_eval
-spec.loader.exec_module(ASF_eval)
-
-spec = importlib.util.spec_from_file_location("model", "//home//irene//Desktop//mag_degree//masters_degree//ASFormer//model.py")
-ASF_model = importlib.util.module_from_spec(spec)
-sys.modules["ASF_model"] = ASF_model
-spec.loader.exec_module(ASF_model)
-from ASF_model import MyTransformer
 
 import torch
 
@@ -939,8 +929,9 @@ class MMFusionShareActionLocalization(MMFusionShare):
         return {"logits": logits}
         
 #--------------------------------------------for ASF------------------------------------------------------
+from ..modules import VideoTokenMLP
 
-class MMFusionSeparateASF(MMFusionShare):
+class MMFusionSeparateASF(nn.Module):
     def __init__(self, config, **kwargs):
         super().__init__()
         transformer_config = AutoConfig.from_pretrained(
@@ -955,21 +946,33 @@ class MMFusionSeparateASF(MMFusionShare):
         if config.dataset.num_iso_layer is not None:
             self.last_iso_layer = config.dataset.num_iso_layer - 1 + 1
 
-        from ASFormer.model import MyTransformer
         if config.model.text_encoder_cls is not None:
-         
             model_config = AutoConfig.from_pretrained(config.dataset.bert_name)
             model_config.max_video_len = config.dataset.max_video_len
             
-            ############################################################ from ASFormer ###################################################################
+            ##################################################### ASFormer part #######################################################################
+            # really long importing of the part from ASF
+            eval_spec = importlib.util.spec_from_file_location("eval", "F:\IChuviliaeva\masters_degree\ASFormer\eval.py")
+            ASF_eval = importlib.util.module_from_spec(eval_spec)
+            sys.modules["eval"] = ASF_eval
+            eval_spec.loader.exec_module(ASF_eval)
+
+            model_spec = importlib.util.spec_from_file_location("model", "F:\IChuviliaeva\masters_degree\ASFormer\model.py")
+            ASF_model = importlib.util.module_from_spec(model_spec)
+            sys.modules["ASF_model"] = ASF_model
+            model_spec.loader.exec_module(ASF_model)
+            from ASF_model import MyTransformer
+            
+            # default params
             num_layers = 10
             num_f_maps = 64
             features_dim = 1024
             r1 = 2
             r2 = 2
-            channel_mask_rate = 0.3
-            print('config.model.ASF_classes = ', config.model.ASF_classes)
-            self.video_encoder = MyTransformer(3, num_layers, r1, r2, num_f_maps, input_dim, config.model.ASF_classes, channel_masking_rate)
+            channel_masking_rate = 0.3
+            input_dim = 1024
+            self.num_classes = config.model.ASF_classes
+            self.video_encoder = MyTransformer(3, num_layers, r1, r2, num_f_maps, input_dim, self.num_classes, channel_masking_rate).half()
             ############################################################ from ASFormer ###################################################################
             
             # exact same NLP model from Huggingface.
@@ -992,7 +995,6 @@ class MMFusionSeparateASF(MMFusionShare):
         output_hidden_states=False,
         **kwargs
     ):
-
         pooled_video = self.forward_video(
             vfeats,
             vmasks,
@@ -1018,7 +1020,6 @@ class MMFusionSeparateASF(MMFusionShare):
         caps,
         cmasks,
         output_hidden_states=False,
-        **kwargs
     ):
         input_ids = caps[:, :2]
         attention_mask = torch.cat([
@@ -1033,22 +1034,33 @@ class MMFusionSeparateASF(MMFusionShare):
             device=vmasks.device)
 
         #####################################################################################from ASFormer###########################################################################
-        # надо понять, чего за маска и чего за hidden_states...
-        # маска наверняка похожа на местную - т. к. всё ещё трансформеры.
-        ps = self.video_encoder(vfeats, attention_mask)
-        video_outputs = outputs[0]
-        print('video_outputs.shape = ', video_outputs.shape)
+        # mask (batch x classes X max_length) = 1 if there is a target for bth fragment of batch in time t, 0 otherwise   
+        # hidden_states...??
+        vfeats = vfeats.permute(0, 2, 1)
+        # print('vfeats.shape = ', vfeats.shape)
+        # print('attention_mask.shape = ',attention_mask.shape)
+        # print('vmasks.shape = ', vmasks.shape)
+        # print('first 8 vmasks: ', vmasks[:8, :])
+        
+        ASFmask = vmasks.unsqueeze(1).repeat(1, self.num_classes, 1)
+        # print('ASFmask.shape = ', ASFmask.shape)
+        # print('8 from ASFmask: ', ASFmask[:8, 11, :])
+
+        outputs = self.video_encoder(vfeats, ASFmask)
+        # print('outputs.shape before ermute = ', video_outputs.shape)
+        video_outputs = outputs[0].permute(0, 2, 1)
+        # print('video_outputs.shape after permute = ', video_outputs.shape)
         #####################################################################################from ASFormer###########################################################################
 
         if output_hidden_states:
             #########################################################################################################################################################################
-            print('output_hidden_states in MMFusionSeparateASF!')
+            # print('output_hidden_states in MMFusionSeparateASF!')
             #########################################################################################################################################################################
             return video_outputs
 
         batch_size = cmasks.size(0)
         #########################################################################################################################################################################
-        print('batch_size = ', batch_size)
+        # print('batch_size = ', batch_size)
         #########################################################################################################################################################################
             
 
@@ -1063,7 +1075,7 @@ class MMFusionSeparateASF(MMFusionShare):
             dim=1,
         )
         #########################################################################################################################################################################
-        print('video_attention_mask.shape = ', video_attention_mask.shape)
+        # print('video_attention_mask.shape = ', video_attention_mask.shape)
         #########################################################################################################################################################################
         
         assert video_outputs.size(1) == video_attention_mask.size(1)
@@ -1076,7 +1088,7 @@ class MMFusionSeparateASF(MMFusionShare):
             video_attention_mask.unsqueeze(2)
         ).squeeze(-1)
         #########################################################################################################################################################################
-        print('pooled_video.shape = ', pooled_video.shape)
+        # print('pooled_video.shape = ', pooled_video.shape)
         #########################################################################################################################################################################
         return pooled_video  # video_outputs
 

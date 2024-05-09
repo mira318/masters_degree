@@ -11,7 +11,7 @@ import random
 import wandb
 
 
-wandb.init(project='ASFormer on features from I3D')
+# wandb.init(project='ASFormer on features from I3D')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 seed = 19980125 # my birthday, :)
@@ -24,10 +24,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--action', default='train')
 parser.add_argument('--dataset', default="50salads")
 parser.add_argument('--split', default='1')
-parser.add_argument('--model_dir', default='models_i3d')
-parser.add_argument('--result_dir', default='results_i3d')
-parser.add_argument('--data_dir', default='/DATA/ichuviliaeva/videos/data/')
-parser.add_argument('--features_dir', default='/DATA/ichuviliaeva/videos/i3d_experemental/features_cut/')
+parser.add_argument('--model_dir', default='G:\\IChuviliaeva\\Data\\50salads_ASFtest\\models\\')
+parser.add_argument('--result_dir', default='G:\\IChuviliaeva\\Data\\50salads_ASFtest\\results\\')
+parser.add_argument('--data_dir', default='G:\\IChuviliaeva\\Data\\50salads_gt\\')
+parser.add_argument('--features_dir', default='G:\\IChuviliaeva\\Data\\50salads_i3d_back_cut\\')
 
 args = parser.parse_args()
  
@@ -57,16 +57,16 @@ if args.dataset == 'breakfast':
     lr = 0.0001
 
 
-vid_list_file = args.data_dir+args.dataset+"/splits/train.split"+args.split+".bundle"
-vid_list_file_tst = args.data_dir+args.dataset+"/splits/test.split"+args.split+".bundle"
-features_path = args.features_dir # args.data_dir+args.dataset+"/features/"
-gt_path = args.data_dir+args.dataset+"/groundTruth/"
+vid_list_file = args.data_dir+"\\train.split"+args.split+".bundle"      # args.data_dir+args.dataset+"/splits/train.split"+args.split+".bundle"
+vid_list_file_tst = args.data_dir+"\\test.split"+args.split+".bundle"   # args.data_dir+args.dataset+"/splits/test.split"+args.split+".bundle"
+features_path = args.features_dir                                       # args.data_dir+args.dataset+"/features/"
+gt_path = "G:\\IChuviliaeva\\Data\\50salads_gt\\"                       # args.data_dir+args.dataset+"/groundTruth/"
  
-mapping_file = args.data_dir+args.dataset+"/mapping.txt"
+mapping_file = args.data_dir+"\\mapping.txt"                            # args.data_dir+args.dataset+"/mapping.txt"
  
-model_dir = "{}/".format(args.model_dir)+args.dataset+"/split_"+args.split
+model_dir = args.model_dir+"\\split_"+args.split                        # "{}/".format(args.model_dir)+args.dataset+"/split_"+args.split
 
-results_dir = "./{}/".format(args.result_dir)+args.dataset+"/split_"+args.split
+results_dir = args.result_dir+"\\split_"+args.split                     # "./{}/".format(args.result_dir)+args.dataset+"/split_"+args.split
  
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
