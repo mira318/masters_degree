@@ -879,13 +879,19 @@ class The50saladsActionSegmentationMetaProcessor(MetaProcessor):
         
         # спокойно, там просто читалка файлов
         video_processor = The50saladsActionSegmentationVideoProcessor(config)
-        for f in os.listdir(config.vfeat_dir):
-            vfeat_id = f.split('.')[0]
-            gt_file = os.path.join(config.gt_path, vfeat_id + ".txt")
+        
+        gt_ids_file_list = self._get_split_path(config)
+        with open(gt_ids_file_list) as gt_idsf:
+            self.gt_ids = [line.split('\n')[0] for line in gt_idsf.readlines()]
+        
+        
+        for gt_id in self.gt_ids:
+            gt_path = os.path.join(config.gt_path, gt_id)
+            vfeat_id = gt_id.split('.')[0]
             vfeatures = video_processor(vfeat_id)
             
-            with open(gt_file, 'r') as gtf:
-                all_lines = gtf.readlines()
+            with open(gt_path, 'r') as gtp:
+                all_lines = gtp.readlines()
             prev = all_lines[0].split()[0]
             starts, ends, labels = [], [], []
             starts.append(0.0)
@@ -934,7 +940,9 @@ class The50saladsActionSegmentationVideoProcessor(VideoProcessor):
             video_fn = video_fn[0]
         assert isinstance(video_fn, str)
         video_fn = os.path.join(self.vfeat_dir, video_fn + ".npy")
-        return np.load(video_fn)
+        features = np.load(video_fn)
+        features_permuted = features.transpose(1, 0)[30:40, :512]
+        return features_permuted
         
 
 class The50saladsActionSegmentationAligner(Aligner):

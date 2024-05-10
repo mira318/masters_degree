@@ -593,9 +593,6 @@ class DiDeMoPredictor(Predictor):
         self.full_scores = []
         return scores
         
-        
-#########################################50salads######################################################
-
 class The50saladsPredictor(Predictor):
     """    
     should be similar to CrossTask on sliding windows.
