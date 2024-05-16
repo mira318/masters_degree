@@ -615,7 +615,7 @@ class The50saladsPredictor(Predictor):
         with torch.no_grad():
             for batch in eval_dataloader:
                 self(batch, model, Y_pred, Y_true)
-        return self.finalize(Y_pred, Y_true, output_file)
+        return {"outputs": Y_pred, "targets": Y_true}
 
     def __call__(self, sample, model, Y_pred, Y_true):
         sample = self.to_ctx(sample)
@@ -702,7 +702,7 @@ class The50saladsZSPredictor(The50saladsPredictor):
         with torch.no_grad():
             for batch in eval_dataloader:
                 self(batch, label_hidden_states, model, Y_pred, Y_true)
-        return self.finalize(Y_pred, Y_true, output_file)
+        return {"outputs": Y_pred, "targets": Y_true}
 
     def reshape_subsample(self, sample):
         for key in sample:

@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import torch
 import numpy as np
 import json
 
@@ -312,7 +313,6 @@ class ActionRecognitionMetric(Metric):
             )
             
 #------------------------------------------50salads-------------------------------------------------------------
-
 def levenstein(p, y, norm=False):
     """
     From ASFormer
@@ -341,6 +341,50 @@ def levenstein(p, y, norm=False):
  
     return score
 
+def get_labels_start_end_time(frame_wise_labels, bg_class=["background"]):
+    labels = []
+    starts = []
+    ends = []
+    last_label = frame_wise_labels[0]
+    if frame_wise_labels[0] not in bg_class:
+        labels.append(frame_wise_labels[0])
+        starts.append(0)
+    for i in range(len(frame_wise_labels)):
+        if frame_wise_labels[i] != last_label:
+            if frame_wise_labels[i] not in bg_class:
+                labels.append(frame_wise_labels[i])
+                starts.append(i)
+            if last_label not in bg_class:
+                ends.append(i)
+            last_label = frame_wise_labels[i]
+    if last_label not in bg_class:
+        ends.append(i)
+    return labels, starts, ends
+
+def f_score(recognized, ground_truth, overlap, bg_class=["background"]):
+    p_label, p_start, p_end = get_labels_start_end_time(recognized, bg_class)
+    y_label, y_start, y_end = get_labels_start_end_time(ground_truth, bg_class)
+ 
+    tp = 0
+    fp = 0
+ 
+    hits = np.zeros(len(y_label))
+ 
+    for j in range(len(p_label)):
+        intersection = np.minimum(p_end[j], y_end) - np.maximum(p_start[j], y_start)
+        union = np.maximum(p_end[j], y_end) - np.minimum(p_start[j], y_start)
+        IoU = (1.0*intersection / union)*([p_label[j] == y_label[x] for x in range(len(y_label))])
+        # Get the best scoring segment
+        idx = np.array(IoU).argmax()
+ 
+        if IoU[idx] >= overlap and not hits[idx]:
+            tp += 1
+            hits[idx] = 1
+        else:
+            fp += 1
+    fn = len(y_label) - sum(hits)
+    return float(tp), float(fp), float(fn)
+
 class The50saladsActionSegmentationMetric(Metric):
     """
     should be accuracy, edit dist, f1@10, f1@25, f1@50
@@ -349,15 +393,43 @@ class The50saladsActionSegmentationMetric(Metric):
         super().__init__(config, metric_name)
 
     def compute_metrics(self, outputs, targets):
+        edit_dist = 0
+        overlap = [.1, .25, .5]
+        tp, fp, fn = np.zeros(3), np.zeros(3), np.zeros(3)
+
+        for index in range(len(targets)):
+            edit_dist += levenstein(outputs[index], targets[index])
+            for s in range(len(overlap)):
+                tp1, fp1, fn1 = f_score(outputs[index], targets[index], overlap[s])
+                tp[s] += tp1
+                fp[s] += fp1
+                fn[s] += fn1
+
+        edit_dist /= len(targets)
+        f1s = np.array([0, 0 ,0], dtype=float)
+        for s in range(len(overlap)):
+            precision = tp[s] / float(tp[s] + fp[s])
+            recall = tp[s] / float(tp[s] + fn[s])
+
+            f1 = 2.0 * (precision * recall) / (precision + recall)
+            f1s[s] = np.nan_to_num(f1) * 100
+
+        all_outputs = torch.cat(outputs, dim=0).numpy()
+        all_targets = torch.cat(targets, dim=0).numpy()
+        assert len(all_outputs) == len(all_targets)
+
         n_frames = 0
         n_errors = 0
-        n_errors = sum(outputs != targets)
-        n_frames = len(targets)
-        # edit_dist = levenstein(outputs, targets, True)
-        return {"frame_acc": 1.0 - float(n_errors) / n_frames} #, "edit_dist": edit_dist}
+        n_errors = sum(all_outputs != all_targets)
+        n_frames = len(all_targets)
+        return {"frame_acc": 1.0 - float(n_errors) / n_frames, 
+                "edit_dist": edit_dist, 
+                "f1@10": f1s[0], "f1@25": f1s[1], "f1@50": f1s[2]
+               }
 
     def print_computed_metrics(self, metrics):
-        fa = metrics["frame_acc"]
-        # edit = metrics["edit_dist"]
-        print("frame accuracy:", fa)
-        # print("segment labels edit dist:", edit)
+        print("frame accuracy: {0:.7}".format(metrics["frame_acc"]))
+        print("avg edit dist: {0:.7}".format(metrics["edit_dist"]))
+        print("f1@10: {0:.7}".format(metrics["f1@10"]))
+        print("f1@25: {0:.7}".format(metrics["f1@25"]))
+        print("f1@50: {0:.7}".format(metrics["f1@50"]))
