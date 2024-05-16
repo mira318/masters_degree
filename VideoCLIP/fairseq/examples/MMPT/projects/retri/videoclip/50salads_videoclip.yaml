@@ -2,13 +2,13 @@ dataset:
   video_processor: The50saladsActionSegmentationVideoProcessor
   bert_name: bert-base-uncased
   meta_processor: The50saladsActionSegmentationMetaProcessor
-  vfeat_dir: /home/irene/Desktop/mag_degree/data/50salads/features
+  vfeat_dir: G:\IChuviliaeva\Data\50salads_s3d\net_features
   text_processor: The50saladsActionSegmentationTextProcessor
-  gt_path: /home/irene/Desktop/mag_degree/data/50salads/groundTruth
-  mapping_path: /home/irene/Desktop/mag_degree/data/50salads/mapping.txt
+  gt_path: G:\IChuviliaeva\Data\50salads_gt
+  mapping_path: G:\IChuviliaeva\Data\50salads_gt\mapping.txt
   aligner: The50saladsActionSegmentationAligner
-  train_path: /home/irene/Desktop/mag_degree/data/50salads/splits/train.split1.bundle
-  val_path: /home/irene/Desktop/mag_degree/data/50salads/splits/test.split1.bundle
+  train_path: G:\IChuviliaeva\Data\50salads_gt\train.split5.bundle
+  val_path: G:\IChuviliaeva\Data\50salads_gt\test.split5.bundle
   num_iso_layer: 12
   sliding_window: 8
   sliding_window_size: 32
@@ -19,15 +19,16 @@ fairseq:
     tensorboard_logdir: run
     log_interval: 1000
     fp16: true
+    wandb_project: "VideoCLIP_from_win"
   dataset:
-    num_workers: 1 # was 4
+    num_workers: 4 # was 4
     batch_size: 1
   optimization:
     lr:
     - 5.0e-05
     clip_norm: 2.0
     optimizer: adam
-    adam_betas: (0.9, 0.98)
+    adam_betas: '(0.9,0.98)'
     lr_scheduler: polynomial_decay
     total_num_update: 1000000
     warmup_updates: 122
@@ -35,11 +36,11 @@ fairseq:
     ddp_backend: no_c10d
     max_epoch: 8
   checkpoint:
-    restore_file: runs/retri/videoclip/checkpoint_best.pt
+    restore_file: runs\retri\videoclip\checkpoint_best.pt
     reset_optimizer: true
     reset_dataloader: true
     reset_meters: true
-    save_dir: /home/irene/Desktop/mag_degree/50salads_VideoCLIP
+    save_dir: G:\IChuviliaeva\Data\VCLIP_50salads_runs\fine-tune\split5
 task_type: sweep_big
 model:
   model_cls: MMFusionSeparateActionSegmentation

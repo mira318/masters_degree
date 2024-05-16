@@ -20,7 +20,7 @@ from mmpt.datasets import MMDataset
 
 ######################################################################################################
 import wandb
-wandb.init(project='VideoCLIP from win')
+wandb.init(project='VideoCLIP_from_win')
 ######################################################################################################
 
 

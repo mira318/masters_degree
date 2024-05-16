@@ -940,10 +940,7 @@ class The50saladsActionSegmentationVideoProcessor(VideoProcessor):
             video_fn = video_fn[0]
         assert isinstance(video_fn, str)
         video_fn = os.path.join(self.vfeat_dir, video_fn + ".npy")
-        features = np.load(video_fn)
-        features_permuted = features.transpose(1, 0)[30:40, :512]
-        return features_permuted
-        
+        return np.load(video_fn)
 
 class The50saladsActionSegmentationAligner(Aligner):
     """

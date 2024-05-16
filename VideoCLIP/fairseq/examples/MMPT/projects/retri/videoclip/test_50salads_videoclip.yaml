@@ -1,15 +1,16 @@
 slurm_config: big
 task_type: local_predict
 dataset:
+  split: test
   video_processor: The50saladsActionSegmentationVideoProcessor
   aligner: The50saladsActionSegmentationAligner
   bert_name: bert-base-uncased
-  test_path: /home/irene/Desktop/mag_degree/data/50salads/splits/test.split1.bundle
   meta_processor: The50saladsActionSegmentationMetaProcessor
-  vfeat_dir: /home/irene/Desktop/mag_degree/data/50salads/features
+  vfeat_dir: G:\IChuviliaeva\Data\50salads_s3d\net_features
   text_processor: The50saladsActionSegmentationTextProcessor
-  gt_path: /home/irene/Desktop/mag_degree/data/50salads/groundTruth
-  mapping_path: /home/irene/Desktop/mag_degree/data/50salads/mapping.txt
+  gt_path: G:\IChuviliaeva\Data\50salads_gt
+  mapping_path: G:\IChuviliaeva\Data\50salads_gt\mapping.txt
+  test_path: G:\IChuviliaeva\Data\50salads_gt\test.split5.bundle
   num_iso_layer: 12
   sliding_window: 16
   sliding_window_size: 32
@@ -21,7 +22,8 @@ fairseq:
     valid_subset: test
     num_workers: 2
   common_eval:
-    path: runs/retri/videoclip/coin/checkpoint_best.pt
+    path: G:\IChuviliaeva\Data\VCLIP_50salads_runs\fine-tune\split5\checkpoint_best.pt
+    wandb_project: "VideoCLIP_from_win"
 model:
   model_cls: MMFusionSeparateActionSegmentation
   mm_encoder_cls: null
@@ -29,6 +31,6 @@ model:
   text_encoder_cls: BertModel
   num_hidden_video_layers: 6
 eval:
-  save_path: /home/irene/Desktop/mag_degree/50salads_VideoCLIP
+  save_path: G:\IChuviliaeva\Data\VCLIP_50salads_runs\fine-tune\split5
 metric: The50saladsActionSegmentationMetric
 predictor: The50saladsPredictor

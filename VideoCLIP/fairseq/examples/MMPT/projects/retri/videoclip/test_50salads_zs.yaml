@@ -1,6 +1,7 @@
 slurm_config: big
 task_type: local_predict
 dataset:
+  split: test
   video_processor: The50saladsActionSegmentationVideoProcessor
   aligner: The50saladsActionSegmentationAligner
   bert_name: bert-base-uncased
@@ -9,7 +10,7 @@ dataset:
   text_processor: The50saladsActionSegmentationTextProcessor
   gt_path: G:\IChuviliaeva\Data\50salads_gt
   mapping_path: G:\IChuviliaeva\Data\50salads_gt\mapping.txt
-  test_path: /home/irene/Desktop/mag_degree/data/50salads/splits/test.split1.bundle
+  test_path: G:\IChuviliaeva\Data\50salads_gt\test.split5.bundle
   num_iso_layer: 12
   sliding_window: 16
   sliding_window_size: 32
@@ -19,10 +20,10 @@ fairseq:
   dataset:
     batch_size: 1
     valid_subset: test
-    num_workers: 1 # was 2
+    num_workers: 2 # was 2
   common_eval:
     path: runs\retri\videoclip\checkpoint_best.pt
-    wandb_project: 'VideoCLIP from win'
+    wandb_project: 'VideoCLIP_from_win'
 model:
   model_cls: MMFusionSeparate
   mm_encoder_cls: null
@@ -30,6 +31,6 @@ model:
   text_encoder_cls: BertModel
   num_hidden_video_layers: 6
 eval:
-  save_path: G:\IChuviliaeva\Data\VCLIP_50salads_runs\testing
+  save_path: G:\IChuviliaeva\Data\VCLIP_50salads_runs\zs\split5
 metric: The50saladsActionSegmentationMetric
 predictor: The50saladsZSPredictor
