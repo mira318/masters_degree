@@ -56,7 +56,7 @@ CONFIGS = {
         "shards": 0,
     },
     "s3d": {
-        "fps": 30,
+        "fps": 30, ############################## was 30, 50salads checkpoint change################################################
         "size": 224,
         "centercrop": True,
         "shards": 0,
@@ -118,7 +118,10 @@ with th.no_grad():
                     n_chunk = math.ceil(n_chunk/float(3))
                     features = th.cuda.FloatTensor(n_chunk, 512).fill_(0)
                 elif args.type == 's3d':
-                    features = th.cuda.FloatTensor(n_chunk, 512).fill_(0)
+                    ########################################################50 salads checkpoint change###########################################################
+                    # features = th.cuda.FloatTensor(n_chunk, 512).fill_(0)
+                    features = th.cuda.FloatTensor(n_chunk, 1024).fill_(0)
+                    ########################################################50 salads checkpoint change###########################################################
                 elif args.type == "vae":
                     features = th.cuda.LongTensor(n_chunk, 1024).fill_(0)
                 else:
@@ -135,7 +138,10 @@ with th.no_grad():
                         batch_features = model(video_batch) # (51, 487), (51, 512)
                     elif args.type == 's3d':
                         batch_features = model(video_batch)
-                        batch_features = batch_features['video_embedding']
+                        ########################################################50 salads checkpoint change#######################################################
+                        # batch_features = batch_features['video_embedding']
+                        batch_features = batch_features['mixed_5c']
+                        ########################################################50 salads checkpoint change#######################################################
                     elif args.type == "vae":
                         # image_code.
                         batch_features = model(video_batch)
